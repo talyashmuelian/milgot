@@ -1,0 +1,12 @@
+# Python
+backend/venv/
+backend/__pycache__/
+backend/**/__pycache__/
+*.pyc
+backend/milgot.db
+
+# Node (frontend/dist is intentionally NOT ignored - see README deployment section)
+frontend/node_modules/
+
+# Local tool config
+.claude/

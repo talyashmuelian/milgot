@@ -1,0 +1,502 @@
+.app-shell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+}
+
+/* ---------- Header / tabs ---------- */
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 28px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.app-header h1 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-h);
+}
+
+.tab-nav {
+  display: flex;
+  gap: 4px;
+  background: var(--accent-bg);
+  padding: 4px;
+  border-radius: 999px;
+}
+
+.tab-nav button {
+  border: none;
+  background: none;
+  padding: 8px 20px;
+  border-radius: 999px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--text);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.tab-nav button.active {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.tab-nav button:not(.active):hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* ---------- Students / months / record layout ---------- */
+
+.app-layout {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  align-items: stretch;
+  gap: 20px;
+  padding: 20px 28px;
+  box-sizing: border-box;
+}
+
+.sidebar {
+  flex: 0 0 230px;
+  background: var(--bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+
+.students-sidebar h2 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0 0 14px;
+  color: var(--text-h);
+}
+
+.months-sidebar h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 10px;
+  color: var(--text-h);
+}
+
+.add-form {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.add-form input {
+  flex: 1;
+  min-width: 0;
+}
+
+.students-list,
+.months-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.students-list li,
+.months-list li {
+  display: flex;
+  align-items: center;
+  border-radius: 8px;
+}
+
+.students-list li.selected,
+.months-list li.selected {
+  background: var(--accent-bg);
+}
+
+.student-name,
+.months-list li > button:first-child {
+  flex: 1;
+  text-align: start;
+  background: none;
+  border: none;
+  padding: 9px 10px;
+  cursor: pointer;
+  border-radius: 8px;
+  color: var(--text-h);
+  font: inherit;
+  transition: background-color 0.15s ease;
+}
+
+.student-name:hover,
+.months-list li > button:first-child:hover {
+  background: var(--accent-bg);
+}
+
+.pdf-link {
+  flex: 0 0 auto;
+  background: none;
+  border: 1px solid var(--accent-border);
+  color: var(--accent);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.pdf-link:hover {
+  background: var(--accent-bg);
+}
+
+.pdf-link.full-width {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 14px;
+  padding: 9px;
+  font-size: 0.85rem;
+}
+
+.record-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.record-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.row-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.icon-btn:hover {
+  background: var(--accent-bg);
+}
+
+.edit-form {
+  flex: 1;
+}
+
+.edit-form input {
+  width: 100%;
+}
+
+.year-picker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.year-picker button {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 3px 12px;
+  font: inherit;
+}
+
+.year-picker button:hover {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+}
+
+.record-panel {
+  flex: 1;
+  background: var(--bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 32px;
+  box-sizing: border-box;
+}
+
+.record-panel.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  font-size: 1.05rem;
+}
+
+.field-row {
+  display: flex;
+  gap: 28px;
+  margin-bottom: 18px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.field-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.95rem;
+  color: var(--text-h);
+}
+
+.calc-row {
+  align-items: center;
+  gap: 16px;
+}
+
+.calc-row button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  transition: filter 0.15s ease;
+}
+
+.calc-row button:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.calc-row button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.amount {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 30px 0;
+}
+
+.checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(200px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+  max-width: 520px;
+}
+
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  color: var(--text-h);
+}
+
+/* ---------- Shared inputs ---------- */
+
+input[type="text"],
+input[type="number"] {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  background: var(--bg);
+  color: var(--text-h);
+}
+
+input[type="number"] {
+  width: 160px;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus {
+  outline: none;
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+/* ---------- Calendar page ---------- */
+
+.calendar-page {
+  flex: 1;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px 28px 40px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.calendar-nav h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--text-h);
+  min-width: 160px;
+  text-align: center;
+}
+
+.calendar-nav button {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  box-shadow: var(--shadow);
+}
+
+.calendar-nav button:hover {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  background: var(--bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.calendar-weekday-header {
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+  padding-bottom: 8px;
+}
+
+.calendar-cell {
+  min-height: 68px;
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: var(--bg-page);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.calendar-cell.empty {
+  background: none;
+}
+
+.calendar-cell.weekend {
+  background: var(--border);
+  opacity: 0.7;
+}
+
+.calendar-cell.erev {
+  background: var(--accent-bg);
+}
+
+.calendar-cell.yomtov {
+  background: var(--accent);
+}
+
+.calendar-cell.yomtov .day-number,
+.calendar-cell.yomtov .day-label {
+  color: #fff;
+}
+
+.day-number {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-h);
+}
+
+.day-label {
+  font-size: 0.68rem;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.calendar-hours {
+  margin-top: 22px;
+  background: var(--bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px 24px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.calendar-hours label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.95rem;
+  color: var(--text-h);
+}
+
+.calendar-hours button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 9px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  height: fit-content;
+  align-self: flex-end;
+}
+
+.calendar-hours button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.link-button {
+  background: none !important;
+  color: var(--accent) !important;
+  font-weight: 500 !important;
+  padding: 9px 4px !important;
+}
+
+.calendar-hint {
+  flex-basis: 100%;
+  font-size: 0.85rem;
+  color: var(--text);
+  margin-top: 4px;
+}
