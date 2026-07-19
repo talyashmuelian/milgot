@@ -68,3 +68,17 @@ class MonthHours(db.Model):
     year = db.Column(db.Integer, nullable=False)
     month = db.Column(db.Integer, nullable=False)  # 1-12
     hours = db.Column(db.Float, nullable=False)
+
+
+class DayExclusion(db.Model):
+    """A specific calendar date where N hours are manually excluded from
+    that month's expected-hours total (e.g. a half day, an unplanned closure)."""
+
+    __tablename__ = "day_exclusions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.Date, nullable=False, unique=True)
+    excluded_hours = db.Column(db.Float, nullable=False, default=8)
+
+    def to_dict(self):
+        return {"date": self.date.isoformat(), "excluded_hours": self.excluded_hours}

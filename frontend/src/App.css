@@ -447,6 +447,27 @@ input[type="number"]:focus {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  cursor: context-menu;
+}
+
+.calendar-cell.manual-exclusion {
+  outline: 2px dashed #e08a1e;
+  outline-offset: -2px;
+}
+
+.day-exclusion-badge {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: #b56a00;
+  background: rgba(224, 138, 30, 0.15);
+  border-radius: 4px;
+  padding: 1px 4px;
+  align-self: flex-start;
+}
+
+.calendar-cell.yomtov .day-exclusion-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
 }
 
 .calendar-cell.empty {
@@ -481,6 +502,74 @@ input[type="number"]:focus {
   font-size: 0.68rem;
   color: var(--text);
   line-height: 1.2;
+}
+
+.context-menu {
+  position: fixed;
+  z-index: 1000;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+}
+
+.context-menu button {
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  text-align: start;
+  cursor: pointer;
+  border-radius: 6px;
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--text-h);
+}
+
+.context-menu button:hover {
+  background: var(--accent-bg);
+}
+
+.exclusion-popover {
+  position: fixed;
+  z-index: 1000;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 200px;
+}
+
+.exclusion-popover label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--text-h);
+}
+
+.exclusion-popover-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.exclusion-popover-actions button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.85rem;
 }
 
 .calendar-hours {

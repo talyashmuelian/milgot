@@ -76,3 +76,15 @@ export function saveMonthHours(year, month, hours) {
     body: JSON.stringify({ hours }),
   }).then(handle);
 }
+
+export function setDayExclusion(date, excludedHours) {
+  return fetch(`${BASE_URL}/day-exclusions/${date}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ excluded_hours: excludedHours }),
+  }).then(handle);
+}
+
+export function deleteDayExclusion(date) {
+  return fetch(`${BASE_URL}/day-exclusions/${date}`, { method: "DELETE" }).then(handle);
+}

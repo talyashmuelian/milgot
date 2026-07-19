@@ -1,3 +1,4 @@
+import datetime
 import os
 
 from flask import Flask, jsonify, request, send_file, send_from_directory
@@ -6,7 +7,7 @@ from sqlalchemy import inspect, text
 
 from calculations import EXTRA_FIELDS, calculate_attendance_stipend, calculate_total_stipend
 from holidays import month_calendar
-from models import Avrech, MonthHours, MonthlyRecord, db
+from models import Avrech, DayExclusion, MonthHours, MonthlyRecord, db
 from pdf import build_avrech_report_pdf, build_month_report_pdf, build_record_pdf
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -146,11 +147,31 @@ def get_record(avrech_id, year, month):
     return jsonify(record.to_dict())
 
 
+def _month_calendar_with_exclusions(year, month):
+    """month_calendar() plus manual per-day exclusions folded into each
+    day's info and into a recalculated suggested_hours total."""
+    data = month_calendar(year, month)
+    dates = [datetime.date.fromisoformat(d["date"]) for d in data["days"]]
+    exclusion_rows = DayExclusion.query.filter(DayExclusion.date.in_(dates)).all()
+    exclusions = {e.date.isoformat(): e.excluded_hours for e in exclusion_rows}
+
+    total = 0.0
+    for day in data["days"]:
+        is_business = not (day["is_weekend"] or day["is_yomtov"] or day["is_erev"])
+        base = 8 if is_business else 0
+        excl = exclusions.get(day["date"])
+        day["excluded_hours"] = excl
+        total += max(0, base - (excl or 0))
+
+    data["suggested_hours"] = total
+    return data
+
+
 def _expected_hours(year, month):
     override = MonthHours.query.filter_by(year=year, month=month).first()
     if override:
         return override.hours
-    return month_calendar(year, month)["suggested_hours"]
+    return _month_calendar_with_exclusions(year, month)["suggested_hours"]
 
 
 @app.post("/api/records/<int:avrech_id>/<int:year>/<int:month>/attendance")
@@ -242,7 +263,7 @@ def avrech_report_pdf(avrech_id, year):
 
 @app.get("/api/calendar/<int:year>/<int:month>")
 def get_calendar(year, month):
-    data = month_calendar(year, month)
+    data = _month_calendar_with_exclusions(year, month)
     override = MonthHours.query.filter_by(year=year, month=month).first()
     data["saved_hours"] = override.hours if override else None
     return jsonify(data)
@@ -263,6 +284,40 @@ def save_calendar_hours(year, month):
         override.hours = hours
     db.session.commit()
     return jsonify({"year": year, "month": month, "hours": override.hours})
+
+
+@app.put("/api/day-exclusions/<date_str>")
+def set_day_exclusion(date_str):
+    try:
+        date_obj = datetime.date.fromisoformat(date_str)
+    except ValueError:
+        return jsonify({"error": "invalid date"}), 400
+
+    data = request.get_json(force=True)
+    hours = data.get("excluded_hours")
+    if hours is None:
+        return jsonify({"error": "excluded_hours is required"}), 400
+
+    exclusion = DayExclusion.query.filter_by(date=date_obj).first()
+    if exclusion is None:
+        exclusion = DayExclusion(date=date_obj, excluded_hours=hours)
+        db.session.add(exclusion)
+    else:
+        exclusion.excluded_hours = hours
+    db.session.commit()
+    return jsonify(exclusion.to_dict())
+
+
+@app.delete("/api/day-exclusions/<date_str>")
+def delete_day_exclusion(date_str):
+    try:
+        date_obj = datetime.date.fromisoformat(date_str)
+    except ValueError:
+        return jsonify({"error": "invalid date"}), 400
+
+    DayExclusion.query.filter_by(date=date_obj).delete()
+    db.session.commit()
+    return "", 204
 
 
 if __name__ == "__main__":
