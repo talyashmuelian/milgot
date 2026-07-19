@@ -6,6 +6,7 @@ from flask_cors import CORS
 from sqlalchemy import inspect, text
 
 from calculations import EXTRA_FIELDS, calculate_attendance_stipend, calculate_total_stipend
+from excel import build_avrech_report_xlsx, build_month_report_xlsx
 from holidays import month_calendar
 from models import Avrech, DayExclusion, MonthHours, MonthlyRecord, db
 from pdf import build_avrech_report_pdf, build_month_report_pdf, build_record_pdf
@@ -207,7 +208,37 @@ def calculate_total(avrech_id, year, month):
     return jsonify(record.to_dict())
 
 
-# ---------- PDF reports ----------
+# ---------- Reports (PDF / Excel / JSON) ----------
+
+def _month_report_rows(year, month):
+    """list of (avrech_name, record_dict), one per avrech, ordered by name."""
+    avreichim = Avrech.query.order_by(Avrech.name).all()
+    records_by_avrech = {
+        r.avrech_id: r
+        for r in MonthlyRecord.query.filter_by(year=year, month=month).all()
+    }
+    return [
+        (
+            a.name,
+            records_by_avrech[a.id].to_dict()
+            if a.id in records_by_avrech
+            else _empty_record(a.id, year, month),
+        )
+        for a in avreichim
+    ]
+
+
+def _avrech_report_rows(avrech_id, year):
+    """list of 12 record dicts for one avrech, index 0 = January."""
+    records_by_month = {
+        r.month: r
+        for r in MonthlyRecord.query.filter_by(avrech_id=avrech_id, year=year).all()
+    }
+    return [
+        records_by_month[m].to_dict() if m in records_by_month else _empty_record(avrech_id, year, m)
+        for m in range(1, 13)
+    ]
+
 
 @app.get("/api/records/<int:avrech_id>/<int:year>/<int:month>/pdf")
 def record_pdf(avrech_id, year, month):
@@ -220,43 +251,61 @@ def record_pdf(avrech_id, year, month):
     return send_file(buf, mimetype="application/pdf", as_attachment=True, download_name=filename)
 
 
+@app.get("/api/reports/month/<int:year>/<int:month>")
+def month_report_json(year, month):
+    rows = _month_report_rows(year, month)
+    return jsonify([{"name": name, **record} for name, record in rows])
+
+
 @app.get("/api/reports/month/<int:year>/<int:month>/pdf")
 def month_report_pdf(year, month):
-    avreichim = Avrech.query.order_by(Avrech.name).all()
-    records_by_avrech = {
-        r.avrech_id: r
-        for r in MonthlyRecord.query.filter_by(year=year, month=month).all()
-    }
-    rows = [
-        (
-            a.name,
-            records_by_avrech[a.id].to_dict()
-            if a.id in records_by_avrech
-            else _empty_record(a.id, year, month),
-        )
-        for a in avreichim
-    ]
-
+    rows = _month_report_rows(year, month)
     buf = build_month_report_pdf(year, month, rows)
     filename = f"month_report_{year}_{month:02d}.pdf"
     return send_file(buf, mimetype="application/pdf", as_attachment=True, download_name=filename)
 
 
+@app.get("/api/reports/month/<int:year>/<int:month>/xlsx")
+def month_report_xlsx(year, month):
+    rows = _month_report_rows(year, month)
+    buf = build_month_report_xlsx(year, month, rows)
+    filename = f"month_report_{year}_{month:02d}.xlsx"
+    return send_file(
+        buf,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=filename,
+    )
+
+
+@app.get("/api/reports/avrech/<int:avrech_id>/<int:year>")
+def avrech_report_json(avrech_id, year):
+    avrech = Avrech.query.get_or_404(avrech_id)
+    rows = _avrech_report_rows(avrech_id, year)
+    return jsonify({"avrech_name": avrech.name, "months": rows})
+
+
 @app.get("/api/reports/avrech/<int:avrech_id>/<int:year>/pdf")
 def avrech_report_pdf(avrech_id, year):
     avrech = Avrech.query.get_or_404(avrech_id)
-    records_by_month = {
-        r.month: r
-        for r in MonthlyRecord.query.filter_by(avrech_id=avrech_id, year=year).all()
-    }
-    rows = [
-        records_by_month[m].to_dict() if m in records_by_month else _empty_record(avrech_id, year, m)
-        for m in range(1, 13)
-    ]
-
+    rows = _avrech_report_rows(avrech_id, year)
     buf = build_avrech_report_pdf(avrech.name, year, rows)
     filename = f"avrech_report_{avrech_id}_{year}.pdf"
     return send_file(buf, mimetype="application/pdf", as_attachment=True, download_name=filename)
+
+
+@app.get("/api/reports/avrech/<int:avrech_id>/<int:year>/xlsx")
+def avrech_report_xlsx(avrech_id, year):
+    avrech = Avrech.query.get_or_404(avrech_id)
+    rows = _avrech_report_rows(avrech_id, year)
+    buf = build_avrech_report_xlsx(avrech.name, year, rows)
+    filename = f"avrech_report_{avrech_id}_{year}.xlsx"
+    return send_file(
+        buf,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        as_attachment=True,
+        download_name=filename,
+    )
 
 
 # ---------- Calendar / month hours ----------

@@ -3,6 +3,7 @@ import StudentsSidebar from "./components/StudentsSidebar";
 import MonthsSidebar from "./components/MonthsSidebar";
 import RecordPanel from "./components/RecordPanel";
 import CalendarPage from "./components/CalendarPage";
+import SummaryPage from "./components/SummaryPage";
 import {
   listAvreichim,
   createAvrech,
@@ -104,6 +105,12 @@ export default function App() {
           >
             לוח שנה
           </button>
+          <button
+            className={activeTab === "summary" ? "active" : ""}
+            onClick={() => setActiveTab("summary")}
+          >
+            סיכום כללי
+          </button>
         </nav>
       </header>
 
@@ -139,8 +146,10 @@ export default function App() {
             onCalculateTotal={handleCalculateTotal}
           />
         </div>
-      ) : (
+      ) : activeTab === "calendar" ? (
         <CalendarPage />
+      ) : (
+        <SummaryPage />
       )}
     </div>
   );

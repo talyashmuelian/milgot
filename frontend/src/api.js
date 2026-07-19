@@ -65,6 +65,22 @@ export function avrechReportPdfUrl(avrechId, year) {
   return `${BASE_URL}/reports/avrech/${avrechId}/${year}/pdf`;
 }
 
+export function getMonthReport(year, month) {
+  return fetch(`${BASE_URL}/reports/month/${year}/${month}`).then(handle);
+}
+
+export function getAvrechReport(avrechId, year) {
+  return fetch(`${BASE_URL}/reports/avrech/${avrechId}/${year}`).then(handle);
+}
+
+export function monthReportXlsxUrl(year, month) {
+  return `${BASE_URL}/reports/month/${year}/${month}/xlsx`;
+}
+
+export function avrechReportXlsxUrl(avrechId, year) {
+  return `${BASE_URL}/reports/avrech/${avrechId}/${year}/xlsx`;
+}
+
 export function getCalendarMonth(year, month) {
   return fetch(`${BASE_URL}/calendar/${year}/${month}`).then(handle);
 }
