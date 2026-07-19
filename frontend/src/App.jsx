@@ -44,14 +44,14 @@ export default function App() {
     return listAvreichim().then(setAvreichim);
   }
 
-  async function handleAdd(name) {
-    const avrech = await createAvrech(name);
+  async function handleAdd(name, childrenCount) {
+    const avrech = await createAvrech(name, childrenCount);
     await refreshAvreichim();
     setSelectedAvrechId(avrech.id);
   }
 
-  async function handleRename(id, name) {
-    await updateAvrech(id, name);
+  async function handleRename(id, name, childrenCount) {
+    await updateAvrech(id, name, childrenCount);
     await refreshAvreichim();
   }
 

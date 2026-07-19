@@ -2,8 +2,9 @@ import os
 
 from flask import Flask, jsonify, request, send_file, send_from_directory
 from flask_cors import CORS
+from sqlalchemy import inspect, text
 
-from calculations import calculate_attendance_stipend, calculate_total_stipend
+from calculations import EXTRA_FIELDS, calculate_attendance_stipend, calculate_total_stipend
 from holidays import month_calendar
 from models import Avrech, MonthHours, MonthlyRecord, db
 from pdf import build_avrech_report_pdf, build_month_report_pdf, build_record_pdf
@@ -31,8 +32,24 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db.init_app(app)
 
+
+def _ensure_columns():
+    """Add columns introduced after the DB file already existed (SQLite ADD COLUMN)."""
+    inspector = inspect(db.engine)
+    avrech_cols = {c["name"] for c in inspector.get_columns("avreichim")}
+    record_cols = {c["name"] for c in inspector.get_columns("monthly_records")}
+
+    with db.engine.begin() as conn:
+        if "children_count" not in avrech_cols:
+            conn.execute(text("ALTER TABLE avreichim ADD COLUMN children_count INTEGER NOT NULL DEFAULT 0"))
+        for col in ("emuna", "tanach", "review_test", "enrichment", "reserve_duty"):
+            if col not in record_cols:
+                conn.execute(text(f"ALTER TABLE monthly_records ADD COLUMN {col} BOOLEAN NOT NULL DEFAULT 0"))
+
+
 with app.app_context():
     db.create_all()
+    _ensure_columns()
 
 
 # ---------- Frontend (built React app, if present) ----------
@@ -62,7 +79,8 @@ def create_avrech():
     name = (data.get("name") or "").strip()
     if not name:
         return jsonify({"error": "name is required"}), 400
-    avrech = Avrech(name=name)
+    children_count = int(data.get("children_count") or 0)
+    avrech = Avrech(name=name, children_count=children_count)
     db.session.add(avrech)
     db.session.commit()
     return jsonify(avrech.to_dict()), 201
@@ -76,6 +94,7 @@ def update_avrech(avrech_id):
     if not name:
         return jsonify({"error": "name is required"}), 400
     avrech.name = name
+    avrech.children_count = int(data.get("children_count") or 0)
     db.session.commit()
     return jsonify(avrech.to_dict())
 
@@ -108,9 +127,13 @@ def _empty_record(avrech_id, year, month):
         "excluded_hours": None,
         "attendance_amount": None,
         "with_american": False,
-        "emuna_tanach": False,
+        "emuna": False,
+        "tanach": False,
         "ktiva": False,
         "gemara_bekiut": False,
+        "review_test": False,
+        "enrichment": False,
+        "reserve_duty": False,
         "total_amount": None,
     }
 
@@ -123,9 +146,16 @@ def get_record(avrech_id, year, month):
     return jsonify(record.to_dict())
 
 
+def _expected_hours(year, month):
+    override = MonthHours.query.filter_by(year=year, month=month).first()
+    if override:
+        return override.hours
+    return month_calendar(year, month)["suggested_hours"]
+
+
 @app.post("/api/records/<int:avrech_id>/<int:year>/<int:month>/attendance")
 def calculate_attendance(avrech_id, year, month):
-    Avrech.query.get_or_404(avrech_id)
+    avrech = Avrech.query.get_or_404(avrech_id)
     data = request.get_json(force=True)
     study_hours = data.get("study_hours")
     excluded_hours = data.get("excluded_hours")
@@ -133,7 +163,9 @@ def calculate_attendance(avrech_id, year, month):
     record = _get_or_create_record(avrech_id, year, month)
     record.study_hours = study_hours
     record.excluded_hours = excluded_hours
-    record.attendance_amount = calculate_attendance_stipend(study_hours, excluded_hours)
+    record.attendance_amount = calculate_attendance_stipend(
+        study_hours, excluded_hours, _expected_hours(year, month), avrech.children_count
+    )
     db.session.commit()
     return jsonify(record.to_dict())
 
@@ -144,17 +176,12 @@ def calculate_total(avrech_id, year, month):
     data = request.get_json(force=True)
 
     record = _get_or_create_record(avrech_id, year, month)
-    record.with_american = bool(data.get("with_american"))
-    record.emuna_tanach = bool(data.get("emuna_tanach"))
-    record.ktiva = bool(data.get("ktiva"))
-    record.gemara_bekiut = bool(data.get("gemara_bekiut"))
-    record.total_amount = calculate_total_stipend(
-        record.attendance_amount,
-        record.with_american,
-        record.emuna_tanach,
-        record.ktiva,
-        record.gemara_bekiut,
-    )
+    for field in EXTRA_FIELDS:
+        setattr(record, field, bool(data.get(field)))
+    record.reserve_duty = bool(data.get("reserve_duty"))
+
+    extras = {field: getattr(record, field) for field in EXTRA_FIELDS}
+    record.total_amount = calculate_total_stipend(record.attendance_amount, extras, record.reserve_duty)
     db.session.commit()
     return jsonify(record.to_dict())
 

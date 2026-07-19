@@ -104,6 +104,18 @@
   min-width: 0;
 }
 
+.children-input {
+  flex: 0 0 60px !important;
+  width: 60px !important;
+  min-width: 0 !important;
+}
+
+.children-badge {
+  font-size: 0.8rem;
+  color: var(--text);
+  font-weight: 400;
+}
+
 .students-list,
 .months-list {
   list-style: none;
@@ -203,10 +215,14 @@
 
 .edit-form {
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
-.edit-form input {
-  width: 100%;
+.edit-form input[type="text"] {
+  flex: 1;
+  min-width: 0;
 }
 
 .year-picker {
@@ -316,6 +332,25 @@
   gap: 8px;
   font-size: 0.95rem;
   color: var(--text-h);
+}
+
+.expected-hours-hint {
+  font-size: 0.85rem;
+  color: var(--text);
+  margin: -10px 0 18px;
+}
+
+.reserve-duty-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--text-h);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 20px;
 }
 
 /* ---------- Shared inputs ---------- */

@@ -1,13 +1,26 @@
 import { useEffect, useState } from "react";
 import { MONTH_NAMES } from "../months";
-import { recordPdfUrl } from "../api";
+import { recordPdfUrl, getCalendarMonth } from "../api";
 
 const CHECKBOX_FIELDS = [
   { key: "with_american", label: "לימוד עם אמריקאי" },
-  { key: "emuna_tanach", label: "לימוד אמונה ותנך" },
+  { key: "emuna", label: "לימוד אמונה" },
+  { key: "tanach", label: "לימוד תנ\"ך" },
   { key: "ktiva", label: "כתיבה" },
   { key: "gemara_bekiut", label: "גמרא בקיאות" },
+  { key: "review_test", label: "מבחן חזרה" },
+  { key: "enrichment", label: "העשרות" },
 ];
+
+const EMPTY_CHECKBOXES = {
+  with_american: false,
+  emuna: false,
+  tanach: false,
+  ktiva: false,
+  gemara_bekiut: false,
+  review_test: false,
+  enrichment: false,
+};
 
 export default function RecordPanel({
   avrechId,
@@ -20,12 +33,9 @@ export default function RecordPanel({
 }) {
   const [studyHours, setStudyHours] = useState("");
   const [excludedHours, setExcludedHours] = useState("");
-  const [checkboxes, setCheckboxes] = useState({
-    with_american: false,
-    emuna_tanach: false,
-    ktiva: false,
-    gemara_bekiut: false,
-  });
+  const [checkboxes, setCheckboxes] = useState(EMPTY_CHECKBOXES);
+  const [reserveDuty, setReserveDuty] = useState(false);
+  const [expectedHours, setExpectedHours] = useState(null);
   const [savingAttendance, setSavingAttendance] = useState(false);
   const [savingTotal, setSavingTotal] = useState(false);
 
@@ -35,11 +45,22 @@ export default function RecordPanel({
     setExcludedHours(record.excluded_hours ?? "");
     setCheckboxes({
       with_american: record.with_american ?? false,
-      emuna_tanach: record.emuna_tanach ?? false,
+      emuna: record.emuna ?? false,
+      tanach: record.tanach ?? false,
       ktiva: record.ktiva ?? false,
       gemara_bekiut: record.gemara_bekiut ?? false,
+      review_test: record.review_test ?? false,
+      enrichment: record.enrichment ?? false,
     });
+    setReserveDuty(record.reserve_duty ?? false);
   }, [record]);
+
+  useEffect(() => {
+    if (year == null || month == null) return;
+    getCalendarMonth(year, month).then((data) =>
+      setExpectedHours(data.saved_hours ?? data.suggested_hours)
+    );
+  }, [year, month]);
 
   if (loading) {
     return <main className="record-panel">טוען...</main>;
@@ -68,7 +89,7 @@ export default function RecordPanel({
   async function handleCalculateTotal() {
     setSavingTotal(true);
     try {
-      await onCalculateTotal(checkboxes);
+      await onCalculateTotal({ ...checkboxes, reserve_duty: reserveDuty });
     } finally {
       setSavingTotal(false);
     }
@@ -108,6 +129,10 @@ export default function RecordPanel({
           </label>
         </div>
 
+        {expectedHours != null && (
+          <p className="expected-hours-hint">מתוך {expectedHours} שעות צפויות בחודש זה</p>
+        )}
+
         <div className="field-row calc-row">
           <button onClick={handleCalculateAttendance} disabled={savingAttendance}>
             {savingAttendance ? "מחשב..." : "חשב מלגת נוכחות"}
@@ -135,6 +160,15 @@ export default function RecordPanel({
             </label>
           ))}
         </div>
+
+        <label className="reserve-duty-field">
+          <input
+            type="checkbox"
+            checked={reserveDuty}
+            onChange={(e) => setReserveDuty(e.target.checked)}
+          />
+          היה במילואים החודש (מבטל את שאר החישוב ונותן מלגה קבועה של 3,500 ₪)
+        </label>
 
         <div className="field-row calc-row">
           <button onClick={handleCalculateTotal} disabled={savingTotal}>

@@ -8,10 +8,11 @@ class Avrech(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
+    children_count = db.Column(db.Integer, nullable=False, default=0)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
 
     def to_dict(self):
-        return {"id": self.id, "name": self.name}
+        return {"id": self.id, "name": self.name, "children_count": self.children_count}
 
 
 class MonthlyRecord(db.Model):
@@ -30,9 +31,13 @@ class MonthlyRecord(db.Model):
     attendance_amount = db.Column(db.Float, nullable=True)
 
     with_american = db.Column(db.Boolean, nullable=False, default=False)
-    emuna_tanach = db.Column(db.Boolean, nullable=False, default=False)
+    emuna = db.Column(db.Boolean, nullable=False, default=False)
+    tanach = db.Column(db.Boolean, nullable=False, default=False)
     ktiva = db.Column(db.Boolean, nullable=False, default=False)
     gemara_bekiut = db.Column(db.Boolean, nullable=False, default=False)
+    review_test = db.Column(db.Boolean, nullable=False, default=False)
+    enrichment = db.Column(db.Boolean, nullable=False, default=False)
+    reserve_duty = db.Column(db.Boolean, nullable=False, default=False)
     total_amount = db.Column(db.Float, nullable=True)
 
     def to_dict(self):
@@ -44,9 +49,13 @@ class MonthlyRecord(db.Model):
             "excluded_hours": self.excluded_hours,
             "attendance_amount": self.attendance_amount,
             "with_american": self.with_american,
-            "emuna_tanach": self.emuna_tanach,
+            "emuna": self.emuna,
+            "tanach": self.tanach,
             "ktiva": self.ktiva,
             "gemara_bekiut": self.gemara_bekiut,
+            "review_test": self.review_test,
+            "enrichment": self.enrichment,
+            "reserve_duty": self.reserve_duty,
             "total_amount": self.total_amount,
         }
 

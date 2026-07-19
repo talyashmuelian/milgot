@@ -13,19 +13,19 @@ export function listAvreichim() {
   return fetch(`${BASE_URL}/avreichim`).then(handle);
 }
 
-export function createAvrech(name) {
+export function createAvrech(name, childrenCount) {
   return fetch(`${BASE_URL}/avreichim`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, children_count: childrenCount }),
   }).then(handle);
 }
 
-export function updateAvrech(id, name) {
+export function updateAvrech(id, name, childrenCount) {
   return fetch(`${BASE_URL}/avreichim/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, children_count: childrenCount }),
   }).then(handle);
 }
 

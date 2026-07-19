@@ -12,7 +12,7 @@ import os
 
 from bidi import get_display
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
+from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.units import cm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
@@ -62,8 +62,8 @@ def _yesno(value):
     return he("כן") if value else he("לא")
 
 
-def _title_table(text):
-    table = Table([[he(text)]], colWidths=[17 * cm])
+def _title_table(text, width=17 * cm):
+    table = Table([[he(text)]], colWidths=[width])
     table.setStyle(
         TableStyle(
             [
@@ -77,7 +77,7 @@ def _title_table(text):
     return table
 
 
-def _data_table(reading_order_header, reading_order_rows, col_widths):
+def _data_table(reading_order_header, reading_order_rows, col_widths, font_size=10):
     """Build a table where the first column in reading order ends up
     rightmost, matching how a Hebrew reader scans right-to-left."""
     header = list(reversed(reading_order_header))
@@ -89,12 +89,12 @@ def _data_table(reading_order_header, reading_order_rows, col_widths):
         TableStyle(
             [
                 ("FONTNAME", (0, 0), (-1, -1), FONT_NAME),
-                ("FONTSIZE", (0, 0), (-1, -1), 10),
+                ("FONTSIZE", (0, 0), (-1, -1), font_size),
                 ("ALIGN", (0, 0), (-1, -1), "RIGHT"),
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#f0eefb")),
                 ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
             ]
         )
     )
@@ -107,9 +107,13 @@ def _record_fields(record):
         _hours(record.get("excluded_hours")),
         _amount(record.get("attendance_amount")),
         _yesno(record.get("with_american")),
-        _yesno(record.get("emuna_tanach")),
+        _yesno(record.get("emuna")),
+        _yesno(record.get("tanach")),
         _yesno(record.get("ktiva")),
         _yesno(record.get("gemara_bekiut")),
+        _yesno(record.get("review_test")),
+        _yesno(record.get("enrichment")),
+        _yesno(record.get("reserve_duty")),
         _amount(record.get("total_amount")),
     ]
 
@@ -119,13 +123,18 @@ FIELD_HEADERS = [
     "שעות מוחרגות",
     "מלגת נוכחות",
     "עם אמריקאי",
-    "אמונה ותנך",
+    "אמונה",
+    'תנ"ך',
     "כתיבה",
-    "גמרא בקיאות",
+    "בקיאות",
+    "מבחן חזרה",
+    "העשרות",
+    "מילואים",
     'סה"כ מלגה',
 ]
 
-FIELD_WIDTHS = [w * cm for w in (2, 2, 2.2, 2, 2, 1.8, 2.2, 2.2)]  # before the row-label column
+# before the row-label column; tuned to fit landscape A4 with 12 data columns
+FIELD_WIDTHS = [w * cm for w in (1.8, 1.9, 2, 1.6, 1.3, 1.3, 1.3, 1.4, 1.7, 1.5, 1.5, 2)]
 
 
 def build_record_pdf(avrech_name, year, month, record):
@@ -151,11 +160,18 @@ def build_record_pdf(avrech_name, year, month, record):
     return buf
 
 
+WIDE_PAGE_SIZE = landscape(A4)
+WIDE_MARGIN = 1 * cm
+WIDE_CONTENT_WIDTH = WIDE_PAGE_SIZE[0] - 2 * WIDE_MARGIN
+
+
 def build_month_report_pdf(year, month, avreichim_records):
     """avreichim_records: list of (avrech_name, record_dict)"""
     _ensure_font()
     buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=1 * cm, leftMargin=1 * cm)
+    doc = SimpleDocTemplate(
+        buf, pagesize=WIDE_PAGE_SIZE, rightMargin=WIDE_MARGIN, leftMargin=WIDE_MARGIN
+    )
 
     month_name = MONTH_NAMES[month - 1]
     title = f'דוח מלגות לכל האברכים - {month_name} {year}'
@@ -164,9 +180,9 @@ def build_month_report_pdf(year, month, avreichim_records):
     rows = [[he(name)] + _record_fields(record) for name, record in avreichim_records]
 
     story = [
-        _title_table(title),
+        _title_table(title, width=WIDE_CONTENT_WIDTH),
         Spacer(1, 0.5 * cm),
-        _data_table(header, rows, [3 * cm] + FIELD_WIDTHS),
+        _data_table(header, rows, [3 * cm] + FIELD_WIDTHS, font_size=8),
     ]
     doc.build(story)
     buf.seek(0)
@@ -177,7 +193,9 @@ def build_avrech_report_pdf(avrech_name, year, records_by_month):
     """records_by_month: list of 12 record dicts, index 0 = January"""
     _ensure_font()
     buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=1 * cm, leftMargin=1 * cm)
+    doc = SimpleDocTemplate(
+        buf, pagesize=WIDE_PAGE_SIZE, rightMargin=WIDE_MARGIN, leftMargin=WIDE_MARGIN
+    )
 
     title = f"דוח מלגות - {avrech_name} - שנת {year}"
 
@@ -188,9 +206,9 @@ def build_avrech_report_pdf(avrech_name, year, records_by_month):
     ]
 
     story = [
-        _title_table(title),
+        _title_table(title, width=WIDE_CONTENT_WIDTH),
         Spacer(1, 0.5 * cm),
-        _data_table(header, rows, [2.5 * cm] + FIELD_WIDTHS),
+        _data_table(header, rows, [2.5 * cm] + FIELD_WIDTHS, font_size=8),
     ]
     doc.build(story)
     buf.seek(0)

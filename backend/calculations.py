@@ -1,16 +1,70 @@
-"""Scholarship calculation logic.
+"""Scholarship calculation logic, kept isolated from routing/persistence.
 
-Kept isolated from the request handlers so the real formulas can be
-dropped in later without touching routing/persistence code.
+Attendance stipend: a step function of attendance percentage
+(study_hours / (expected_hours - excluded_hours)). An avrech with 3+
+children gets the top two thresholds lowered by 5 points. Below the
+lowest threshold, the stipend is 0.
+
+Extras: each checked item adds a fixed amount on top of the attendance
+stipend.
+
+Reserve duty (מילואים): overrides everything - the total for that
+month is a flat amount (equal to the rent reference amount), regardless
+of attendance or extras.
 """
 
+ATTENDANCE_TIERS = [
+    (0.80, 4300.0),
+    (0.70, 3900.0),
+    (0.60, 3100.0),
+    (0.50, 2500.0),
+]
 
-def calculate_attendance_stipend(study_hours, excluded_hours):
-    # TODO: replace with the real attendance-stipend formula.
-    return 100.0
+ATTENDANCE_TIERS_MANY_CHILDREN = [
+    (0.75, 4300.0),
+    (0.65, 3900.0),
+    (0.60, 3100.0),
+    (0.50, 2500.0),
+]
+
+MANY_CHILDREN_THRESHOLD = 3
+
+EXTRA_AMOUNTS = {
+    "with_american": 100.0,
+    "emuna": 100.0,
+    "tanach": 100.0,
+    "ktiva": 100.0,
+    "gemara_bekiut": 100.0,
+    "review_test": 100.0,
+    "enrichment": 500.0,
+}
+EXTRA_FIELDS = list(EXTRA_AMOUNTS.keys())
+
+RESERVE_DUTY_AMOUNT = 3500.0
 
 
-def calculate_total_stipend(attendance_amount, with_american, emuna_tanach, ktiva, gemara_bekiut):
-    # TODO: replace with the real per-category amounts; for now the extras add nothing.
+def calculate_attendance_stipend(study_hours, excluded_hours, expected_hours, children_count):
+    if not expected_hours:
+        return 0.0
+    denominator = expected_hours - (excluded_hours or 0)
+    if denominator <= 0:
+        return 0.0
+
+    percentage = (study_hours or 0) / denominator
+    tiers = (
+        ATTENDANCE_TIERS_MANY_CHILDREN
+        if (children_count or 0) >= MANY_CHILDREN_THRESHOLD
+        else ATTENDANCE_TIERS
+    )
+    for threshold, amount in tiers:
+        if percentage >= threshold:
+            return amount
+    return 0.0
+
+
+def calculate_total_stipend(attendance_amount, extras, reserve_duty):
+    if reserve_duty:
+        return RESERVE_DUTY_AMOUNT
     base = attendance_amount or 0.0
-    return base
+    extras_total = sum(EXTRA_AMOUNTS[key] for key, checked in extras.items() if checked)
+    return base + extras_total

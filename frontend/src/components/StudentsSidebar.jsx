@@ -9,27 +9,31 @@ export default function StudentsSidebar({
   onDelete,
 }) {
   const [newName, setNewName] = useState("");
+  const [newChildren, setNewChildren] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [editingName, setEditingName] = useState("");
+  const [editingChildren, setEditingChildren] = useState("");
 
   function submitNew(e) {
     e.preventDefault();
     const name = newName.trim();
     if (!name) return;
-    onAdd(name);
+    onAdd(name, newChildren === "" ? 0 : Number(newChildren));
     setNewName("");
+    setNewChildren("");
   }
 
   function startEdit(avrech) {
     setEditingId(avrech.id);
     setEditingName(avrech.name);
+    setEditingChildren(String(avrech.children_count ?? 0));
   }
 
   function submitEdit(e) {
     e.preventDefault();
     const name = editingName.trim();
     if (!name) return;
-    onRename(editingId, name);
+    onRename(editingId, name, editingChildren === "" ? 0 : Number(editingChildren));
     setEditingId(null);
   }
 
@@ -44,6 +48,14 @@ export default function StudentsSidebar({
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
         />
+        <input
+          type="number"
+          className="children-input"
+          placeholder="ילדים"
+          min="0"
+          value={newChildren}
+          onChange={(e) => setNewChildren(e.target.value)}
+        />
         <button type="submit">הוסף</button>
       </form>
 
@@ -57,13 +69,33 @@ export default function StudentsSidebar({
                   autoFocus
                   value={editingName}
                   onChange={(e) => setEditingName(e.target.value)}
-                  onBlur={() => setEditingId(null)}
                 />
+                <input
+                  type="number"
+                  className="children-input"
+                  min="0"
+                  value={editingChildren}
+                  onChange={(e) => setEditingChildren(e.target.value)}
+                />
+                <button type="submit" className="icon-btn" title="שמור">
+                  ✓
+                </button>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  title="בטל"
+                  onClick={() => setEditingId(null)}
+                >
+                  ✕
+                </button>
               </form>
             ) : (
               <>
                 <button className="student-name" onClick={() => onSelect(avrech.id)}>
                   {avrech.name}
+                  {avrech.children_count > 0 && (
+                    <span className="children-badge"> ({avrech.children_count} ילדים)</span>
+                  )}
                 </button>
                 <span className="row-actions">
                   <button
