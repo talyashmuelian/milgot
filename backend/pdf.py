@@ -25,6 +25,7 @@ _font_registered = False
 
 _FONT_CANDIDATES = [
     r"C:\Windows\Fonts\arial.ttf",
+    "/usr/share/fonts/truetype/noto/NotoSansHebrew-Regular.ttf",  # PythonAnywhere
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
 ]
