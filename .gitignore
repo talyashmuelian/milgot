@@ -10,3 +10,6 @@ frontend/node_modules/
 
 # Local tool config
 .claude/
+
+# Secrets - never commit
+.pythonanywhere_token

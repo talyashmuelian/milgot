@@ -70,24 +70,29 @@ export default function StudentsSidebar({
                   value={editingName}
                   onChange={(e) => setEditingName(e.target.value)}
                 />
-                <input
-                  type="number"
-                  className="children-input"
-                  min="0"
-                  value={editingChildren}
-                  onChange={(e) => setEditingChildren(e.target.value)}
-                />
-                <button type="submit" className="icon-btn" title="שמור">
-                  ✓
-                </button>
-                <button
-                  type="button"
-                  className="icon-btn"
-                  title="בטל"
-                  onClick={() => setEditingId(null)}
-                >
-                  ✕
-                </button>
+                <div className="edit-form-row">
+                  <label className="edit-form-children-label">
+                    ילדים
+                    <input
+                      type="number"
+                      className="children-input"
+                      min="0"
+                      value={editingChildren}
+                      onChange={(e) => setEditingChildren(e.target.value)}
+                    />
+                  </label>
+                  <button type="submit" className="icon-btn" title="שמור">
+                    ✓
+                  </button>
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    title="בטל"
+                    onClick={() => setEditingId(null)}
+                  >
+                    ✕
+                  </button>
+                </div>
               </form>
             ) : (
               <>

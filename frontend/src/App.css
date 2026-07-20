@@ -216,11 +216,29 @@
 .edit-form {
   flex: 1;
   display: flex;
-  align-items: center;
-  gap: 4px;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 2px;
+  min-width: 0;
 }
 
 .edit-form input[type="text"] {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.edit-form-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.edit-form-children-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--text);
   flex: 1;
   min-width: 0;
 }
