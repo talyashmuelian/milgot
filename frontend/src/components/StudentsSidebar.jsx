@@ -94,7 +94,7 @@ export default function StudentsSidebar({
                 <button className="student-name" onClick={() => onSelect(avrech.id)}>
                   {avrech.name}
                   {avrech.children_count > 0 && (
-                    <span className="children-badge"> ({avrech.children_count} ילדים)</span>
+                    <span className="children-badge"> ({avrech.children_count})</span>
                   )}
                 </button>
                 <span className="row-actions">
