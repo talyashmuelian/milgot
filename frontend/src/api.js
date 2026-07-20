@@ -104,3 +104,15 @@ export function setDayExclusion(date, excludedHours) {
 export function deleteDayExclusion(date) {
   return fetch(`${BASE_URL}/day-exclusions/${date}`, { method: "DELETE" }).then(handle);
 }
+
+export function backupUrl() {
+  return `${BASE_URL}/backup`;
+}
+
+export function restoreBackup(data) {
+  return fetch(`${BASE_URL}/restore`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  }).then(handle);
+}

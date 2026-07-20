@@ -4,6 +4,7 @@ import MonthsSidebar from "./components/MonthsSidebar";
 import RecordPanel from "./components/RecordPanel";
 import CalendarPage from "./components/CalendarPage";
 import SummaryPage from "./components/SummaryPage";
+import BackupPage from "./components/BackupPage";
 import {
   listAvreichim,
   createAvrech,
@@ -111,6 +112,12 @@ export default function App() {
           >
             סיכום כללי
           </button>
+          <button
+            className={activeTab === "backup" ? "active" : ""}
+            onClick={() => setActiveTab("backup")}
+          >
+            גיבוי ושחזור
+          </button>
         </nav>
       </header>
 
@@ -148,8 +155,10 @@ export default function App() {
         </div>
       ) : activeTab === "calendar" ? (
         <CalendarPage />
-      ) : (
+      ) : activeTab === "summary" ? (
         <SummaryPage />
+      ) : (
+        <BackupPage onRestored={refreshAvreichim} />
       )}
     </div>
   );

@@ -1,7 +1,8 @@
 import datetime
+import json
 import os
 
-from flask import Flask, jsonify, request, send_file, send_from_directory
+from flask import Flask, Response, jsonify, request, send_file, send_from_directory
 from flask_cors import CORS
 from sqlalchemy import inspect, text
 
@@ -367,6 +368,93 @@ def delete_day_exclusion(date_str):
     DayExclusion.query.filter_by(date=date_obj).delete()
     db.session.commit()
     return "", 204
+
+
+# ---------- Backup / restore ----------
+
+@app.get("/api/backup")
+def backup():
+    avreichim = Avrech.query.all()
+    records = MonthlyRecord.query.all()
+    month_hours = MonthHours.query.all()
+    exclusions = DayExclusion.query.all()
+
+    data = {
+        "version": 1,
+        "exported_at": datetime.datetime.utcnow().isoformat() + "Z",
+        "avreichim": [
+            {"id": a.id, "name": a.name, "children_count": a.children_count} for a in avreichim
+        ],
+        "monthly_records": [r.to_dict() for r in records],
+        "month_hours": [{"year": mh.year, "month": mh.month, "hours": mh.hours} for mh in month_hours],
+        "day_exclusions": [e.to_dict() for e in exclusions],
+    }
+
+    payload = json.dumps(data, ensure_ascii=False, indent=2)
+    filename = f"milgot_backup_{datetime.date.today().isoformat()}.json"
+    return Response(
+        payload,
+        mimetype="application/json",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@app.post("/api/restore")
+def restore():
+    data = request.get_json(force=True)
+    if not isinstance(data, dict) or "avreichim" not in data or "monthly_records" not in data:
+        return jsonify({"error": "קובץ הגיבוי לא תקין"}), 400
+
+    try:
+        MonthlyRecord.query.delete()
+        DayExclusion.query.delete()
+        MonthHours.query.delete()
+        Avrech.query.delete()
+
+        for a in data["avreichim"]:
+            db.session.add(Avrech(id=a["id"], name=a["name"], children_count=a.get("children_count", 0)))
+
+        for r in data["monthly_records"]:
+            db.session.add(
+                MonthlyRecord(
+                    avrech_id=r["avrech_id"],
+                    year=r["year"],
+                    month=r["month"],
+                    study_hours=r.get("study_hours"),
+                    excluded_hours=r.get("excluded_hours"),
+                    attendance_amount=r.get("attendance_amount"),
+                    with_american=bool(r.get("with_american")),
+                    emuna=bool(r.get("emuna")),
+                    tanach=bool(r.get("tanach")),
+                    ktiva=bool(r.get("ktiva")),
+                    gemara_bekiut=bool(r.get("gemara_bekiut")),
+                    review_test=bool(r.get("review_test")),
+                    enrichment=bool(r.get("enrichment")),
+                    reserve_duty=bool(r.get("reserve_duty")),
+                    total_amount=r.get("total_amount"),
+                )
+            )
+
+        for mh in data.get("month_hours", []):
+            db.session.add(MonthHours(year=mh["year"], month=mh["month"], hours=mh["hours"]))
+
+        for e in data.get("day_exclusions", []):
+            db.session.add(
+                DayExclusion(date=datetime.date.fromisoformat(e["date"]), excluded_hours=e["excluded_hours"])
+            )
+
+        db.session.commit()
+    except (KeyError, ValueError, TypeError) as exc:
+        db.session.rollback()
+        return jsonify({"error": f"קובץ הגיבוי לא תקין: {exc}"}), 400
+
+    return jsonify(
+        {
+            "status": "restored",
+            "avreichim": len(data["avreichim"]),
+            "monthly_records": len(data["monthly_records"]),
+        }
+    )
 
 
 if __name__ == "__main__":

@@ -777,3 +777,60 @@ input[type="number"]:focus {
   color: var(--text);
   opacity: 0.6;
 }
+
+/* ---------- Backup page ---------- */
+
+.backup-page {
+  flex: 1;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 20px 28px 40px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.backup-section {
+  background: var(--bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  box-sizing: border-box;
+  margin-bottom: 20px;
+}
+
+.backup-section h2 {
+  margin: 0 0 10px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.backup-section p {
+  margin: 0 0 14px;
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.restore-warning {
+  background: rgba(220, 60, 60, 0.08);
+  border: 1px solid rgba(220, 60, 60, 0.35);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--text-h) !important;
+}
+
+.backup-filename {
+  font-size: 0.85rem !important;
+  color: var(--text-h) !important;
+}
+
+.backup-error {
+  color: #c0392b;
+  font-weight: 600;
+}
+
+.backup-success {
+  color: #1a8a4a;
+  font-weight: 600;
+}
