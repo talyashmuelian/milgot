@@ -9,10 +9,16 @@ class Avrech(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
     children_count = db.Column(db.Integer, nullable=False, default=0)
+    archived = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
 
     def to_dict(self):
-        return {"id": self.id, "name": self.name, "children_count": self.children_count}
+        return {
+            "id": self.id,
+            "name": self.name,
+            "children_count": self.children_count,
+            "archived": self.archived,
+        }
 
 
 class MonthlyRecord(db.Model):

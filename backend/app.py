@@ -45,6 +45,8 @@ def _ensure_columns():
     with db.engine.begin() as conn:
         if "children_count" not in avrech_cols:
             conn.execute(text("ALTER TABLE avreichim ADD COLUMN children_count INTEGER NOT NULL DEFAULT 0"))
+        if "archived" not in avrech_cols:
+            conn.execute(text("ALTER TABLE avreichim ADD COLUMN archived BOOLEAN NOT NULL DEFAULT 0"))
         for col in ("emuna", "tanach", "review_test", "enrichment", "reserve_duty"):
             if col not in record_cols:
                 conn.execute(text(f"ALTER TABLE monthly_records ADD COLUMN {col} BOOLEAN NOT NULL DEFAULT 0"))
@@ -72,7 +74,13 @@ def frontend_asset(filename):
 
 @app.get("/api/avreichim")
 def list_avreichim():
-    avreichim = Avrech.query.order_by(Avrech.name).all()
+    avreichim = Avrech.query.filter_by(archived=False).order_by(Avrech.name).all()
+    return jsonify([a.to_dict() for a in avreichim])
+
+
+@app.get("/api/avreichim/archived")
+def list_archived_avreichim():
+    avreichim = Avrech.query.filter_by(archived=True).order_by(Avrech.name).all()
     return jsonify([a.to_dict() for a in avreichim])
 
 
@@ -102,8 +110,25 @@ def update_avrech(avrech_id):
     return jsonify(avrech.to_dict())
 
 
+@app.post("/api/avreichim/<int:avrech_id>/archive")
+def archive_avrech(avrech_id):
+    avrech = Avrech.query.get_or_404(avrech_id)
+    avrech.archived = True
+    db.session.commit()
+    return jsonify(avrech.to_dict())
+
+
+@app.post("/api/avreichim/<int:avrech_id>/unarchive")
+def unarchive_avrech(avrech_id):
+    avrech = Avrech.query.get_or_404(avrech_id)
+    avrech.archived = False
+    db.session.commit()
+    return jsonify(avrech.to_dict())
+
+
 @app.delete("/api/avreichim/<int:avrech_id>")
 def delete_avrech(avrech_id):
+    """Permanent delete - only reachable from the archive in the UI."""
     avrech = Avrech.query.get_or_404(avrech_id)
     MonthlyRecord.query.filter_by(avrech_id=avrech_id).delete()
     db.session.delete(avrech)
@@ -212,8 +237,8 @@ def calculate_total(avrech_id, year, month):
 # ---------- Reports (PDF / Excel / JSON) ----------
 
 def _month_report_rows(year, month):
-    """list of (avrech_name, record_dict), one per avrech, ordered by name."""
-    avreichim = Avrech.query.order_by(Avrech.name).all()
+    """list of (avrech_name, record_dict), one per non-archived avrech, ordered by name."""
+    avreichim = Avrech.query.filter_by(archived=False).order_by(Avrech.name).all()
     records_by_avrech = {
         r.avrech_id: r
         for r in MonthlyRecord.query.filter_by(year=year, month=month).all()
@@ -383,7 +408,8 @@ def backup():
         "version": 1,
         "exported_at": datetime.datetime.utcnow().isoformat() + "Z",
         "avreichim": [
-            {"id": a.id, "name": a.name, "children_count": a.children_count} for a in avreichim
+            {"id": a.id, "name": a.name, "children_count": a.children_count, "archived": a.archived}
+            for a in avreichim
         ],
         "monthly_records": [r.to_dict() for r in records],
         "month_hours": [{"year": mh.year, "month": mh.month, "hours": mh.hours} for mh in month_hours],
@@ -412,7 +438,14 @@ def restore():
         Avrech.query.delete()
 
         for a in data["avreichim"]:
-            db.session.add(Avrech(id=a["id"], name=a["name"], children_count=a.get("children_count", 0)))
+            db.session.add(
+                Avrech(
+                    id=a["id"],
+                    name=a["name"],
+                    children_count=a.get("children_count", 0),
+                    archived=bool(a.get("archived", False)),
+                )
+            )
 
         for r in data["monthly_records"]:
             db.session.add(

@@ -33,6 +33,18 @@ export function deleteAvrech(id) {
   return fetch(`${BASE_URL}/avreichim/${id}`, { method: "DELETE" }).then(handle);
 }
 
+export function listArchivedAvreichim() {
+  return fetch(`${BASE_URL}/avreichim/archived`).then(handle);
+}
+
+export function archiveAvrech(id) {
+  return fetch(`${BASE_URL}/avreichim/${id}/archive`, { method: "POST" }).then(handle);
+}
+
+export function unarchiveAvrech(id) {
+  return fetch(`${BASE_URL}/avreichim/${id}/unarchive`, { method: "POST" }).then(handle);
+}
+
 export function getRecord(avrechId, year, month) {
   return fetch(`${BASE_URL}/records/${avrechId}/${year}/${month}`).then(handle);
 }

@@ -834,3 +834,68 @@ input[type="number"]:focus {
   color: #1a8a4a;
   font-weight: 600;
 }
+
+/* ---------- Archive page ---------- */
+
+.archive-page {
+  flex: 1;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 20px 28px 40px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.archive-section {
+  background: var(--bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.archive-section h2 {
+  margin: 0 0 10px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.archive-section p {
+  margin: 0 0 14px;
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.archive-empty {
+  padding: 12px 0;
+}
+
+.archive-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.archive-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.archive-name {
+  color: var(--text-h);
+  font-weight: 500;
+}
+
+.archive-delete-link {
+  border-color: #c0392b;
+  color: #c0392b;
+}

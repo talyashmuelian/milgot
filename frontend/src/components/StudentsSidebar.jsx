@@ -6,7 +6,7 @@ export default function StudentsSidebar({
   onSelect,
   onAdd,
   onRename,
-  onDelete,
+  onArchive,
 }) {
   const [newName, setNewName] = useState("");
   const [newChildren, setNewChildren] = useState("");
@@ -112,14 +112,14 @@ export default function StudentsSidebar({
                   </button>
                   <button
                     className="icon-btn"
-                    title="מחק"
+                    title="העבר לארכיון"
                     onClick={() => {
-                      if (window.confirm(`למחוק את ${avrech.name}?`)) {
-                        onDelete(avrech.id);
+                      if (window.confirm(`להעביר את ${avrech.name} לארכיון?`)) {
+                        onArchive(avrech.id);
                       }
                     }}
                   >
-                    🗑
+                    📦
                   </button>
                 </span>
               </>

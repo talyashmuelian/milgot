@@ -5,11 +5,12 @@ import RecordPanel from "./components/RecordPanel";
 import CalendarPage from "./components/CalendarPage";
 import SummaryPage from "./components/SummaryPage";
 import BackupPage from "./components/BackupPage";
+import ArchivePage from "./components/ArchivePage";
 import {
   listAvreichim,
   createAvrech,
   updateAvrech,
-  deleteAvrech,
+  archiveAvrech,
   getRecord,
   calculateAttendance,
   calculateTotal,
@@ -57,8 +58,8 @@ export default function App() {
     await refreshAvreichim();
   }
 
-  async function handleDelete(id) {
-    await deleteAvrech(id);
+  async function handleArchive(id) {
+    await archiveAvrech(id);
     if (selectedAvrechId === id) {
       setSelectedAvrechId(null);
       setSelectedMonth(null);
@@ -118,6 +119,12 @@ export default function App() {
           >
             גיבוי ושחזור
           </button>
+          <button
+            className={activeTab === "archive" ? "active" : ""}
+            onClick={() => setActiveTab("archive")}
+          >
+            ארכיון
+          </button>
         </nav>
       </header>
 
@@ -129,7 +136,7 @@ export default function App() {
             onSelect={handleSelectAvrech}
             onAdd={handleAdd}
             onRename={handleRename}
-            onDelete={handleDelete}
+            onArchive={handleArchive}
           />
 
           {selectedAvrech && (
@@ -157,8 +164,10 @@ export default function App() {
         <CalendarPage />
       ) : activeTab === "summary" ? (
         <SummaryPage />
-      ) : (
+      ) : activeTab === "backup" ? (
         <BackupPage onRestored={refreshAvreichim} />
+      ) : (
+        <ArchivePage />
       )}
     </div>
   );
