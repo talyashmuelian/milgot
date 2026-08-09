@@ -368,13 +368,38 @@
   border: 1px solid var(--accent-border);
   border-radius: 8px;
   padding: 10px 14px;
+  margin-bottom: 12px;
+}
+
+.regular-service-field {
+  background: rgba(220, 60, 60, 0.08);
+  border-color: rgba(220, 60, 60, 0.35);
   margin-bottom: 20px;
+}
+
+.note-field {
+  flex: 1;
+}
+
+.note-field input[type="text"] {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.notes-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.95rem;
+  color: var(--text-h);
+  margin-bottom: 18px;
 }
 
 /* ---------- Shared inputs ---------- */
 
 input[type="text"],
-input[type="number"] {
+input[type="number"],
+textarea {
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -387,8 +412,15 @@ input[type="number"] {
   width: 160px;
 }
 
+textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
 input[type="text"]:focus,
-input[type="number"]:focus {
+input[type="number"]:focus,
+textarea:focus {
   outline: none;
   border-color: var(--accent-border);
   box-shadow: 0 0 0 3px var(--accent-bg);

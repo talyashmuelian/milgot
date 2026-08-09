@@ -47,9 +47,24 @@ def _ensure_columns():
             conn.execute(text("ALTER TABLE avreichim ADD COLUMN children_count INTEGER NOT NULL DEFAULT 0"))
         if "archived" not in avrech_cols:
             conn.execute(text("ALTER TABLE avreichim ADD COLUMN archived BOOLEAN NOT NULL DEFAULT 0"))
-        for col in ("emuna", "tanach", "review_test", "enrichment", "reserve_duty"):
+        for col in ("emuna", "tanach", "review_test", "enrichment", "reserve_duty", "regular_service"):
             if col not in record_cols:
                 conn.execute(text(f"ALTER TABLE monthly_records ADD COLUMN {col} BOOLEAN NOT NULL DEFAULT 0"))
+        for col in (
+            "special_arrangement_amount",
+            "bonus_amount",
+            "manual_adjustment_amount",
+        ):
+            if col not in record_cols:
+                conn.execute(text(f"ALTER TABLE monthly_records ADD COLUMN {col} FLOAT"))
+        for col in (
+            "special_arrangement_note",
+            "bonus_note",
+            "manual_adjustment_note",
+            "notes",
+        ):
+            if col not in record_cols:
+                conn.execute(text(f"ALTER TABLE monthly_records ADD COLUMN {col} TEXT"))
 
 
 with app.app_context():
@@ -162,6 +177,14 @@ def _empty_record(avrech_id, year, month):
         "review_test": False,
         "enrichment": False,
         "reserve_duty": False,
+        "regular_service": False,
+        "special_arrangement_amount": None,
+        "special_arrangement_note": None,
+        "bonus_amount": None,
+        "bonus_note": None,
+        "manual_adjustment_amount": None,
+        "manual_adjustment_note": None,
+        "notes": None,
         "total_amount": None,
     }
 
@@ -227,9 +250,25 @@ def calculate_total(avrech_id, year, month):
     for field in EXTRA_FIELDS:
         setattr(record, field, bool(data.get(field)))
     record.reserve_duty = bool(data.get("reserve_duty"))
+    record.regular_service = bool(data.get("regular_service"))
+    record.special_arrangement_amount = data.get("special_arrangement_amount")
+    record.special_arrangement_note = data.get("special_arrangement_note")
+    record.bonus_amount = data.get("bonus_amount")
+    record.bonus_note = data.get("bonus_note")
+    record.manual_adjustment_amount = data.get("manual_adjustment_amount")
+    record.manual_adjustment_note = data.get("manual_adjustment_note")
+    record.notes = data.get("notes")
 
     extras = {field: getattr(record, field) for field in EXTRA_FIELDS}
-    record.total_amount = calculate_total_stipend(record.attendance_amount, extras, record.reserve_duty)
+    record.total_amount = calculate_total_stipend(
+        record.attendance_amount,
+        extras,
+        record.reserve_duty,
+        record.regular_service,
+        record.special_arrangement_amount,
+        record.bonus_amount,
+        record.manual_adjustment_amount,
+    )
     db.session.commit()
     return jsonify(record.to_dict())
 
@@ -464,6 +503,14 @@ def restore():
                     review_test=bool(r.get("review_test")),
                     enrichment=bool(r.get("enrichment")),
                     reserve_duty=bool(r.get("reserve_duty")),
+                    regular_service=bool(r.get("regular_service")),
+                    special_arrangement_amount=r.get("special_arrangement_amount"),
+                    special_arrangement_note=r.get("special_arrangement_note"),
+                    bonus_amount=r.get("bonus_amount"),
+                    bonus_note=r.get("bonus_note"),
+                    manual_adjustment_amount=r.get("manual_adjustment_amount"),
+                    manual_adjustment_note=r.get("manual_adjustment_note"),
+                    notes=r.get("notes"),
                     total_amount=r.get("total_amount"),
                 )
             )

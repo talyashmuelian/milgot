@@ -8,9 +8,18 @@ lowest threshold, the stipend is 0.
 Extras: each checked item adds a fixed amount on top of the attendance
 stipend.
 
-Reserve duty (מילואים): overrides everything - the total for that
-month is a flat amount (equal to the rent reference amount), regardless
-of attendance or extras.
+Regular military service (שירות צבאי סדיר): overrides everything -
+total is 0, no exceptions (not even the bonus/arrangement/adjustment
+below).
+
+Reserve duty (מילואים): overrides the attendance+extras calculation
+with a flat amount, but the special-arrangement/bonus/manual-adjustment
+line items below still stack on top of it.
+
+Special arrangement / bonus / manual adjustment: three independent
+optional line items that add on top of whatever base applies (normal
+attendance+extras, or the flat reserve-duty amount). Only the manual
+adjustment is expected to ever be negative.
 """
 
 ATTENDANCE_TIERS = [
@@ -30,17 +39,17 @@ ATTENDANCE_TIERS_MANY_CHILDREN = [
 MANY_CHILDREN_THRESHOLD = 3
 
 EXTRA_AMOUNTS = {
-    "with_american": 100.0,
+    "enrichment": 500.0,
     "emuna": 100.0,
     "tanach": 100.0,
+    "review_test": 100.0,
     "ktiva": 100.0,
     "gemara_bekiut": 100.0,
-    "review_test": 100.0,
-    "enrichment": 500.0,
+    "with_american": 100.0,
 }
 EXTRA_FIELDS = list(EXTRA_AMOUNTS.keys())
 
-RESERVE_DUTY_AMOUNT = 3500.0
+RESERVE_DUTY_AMOUNT = 500.0
 
 
 def calculate_attendance_stipend(study_hours, excluded_hours, expected_hours, children_count):
@@ -62,9 +71,27 @@ def calculate_attendance_stipend(study_hours, excluded_hours, expected_hours, ch
     return 0.0
 
 
-def calculate_total_stipend(attendance_amount, extras, reserve_duty):
+def calculate_total_stipend(
+    attendance_amount,
+    extras,
+    reserve_duty,
+    regular_service,
+    special_arrangement_amount,
+    bonus_amount,
+    manual_adjustment_amount,
+):
+    if regular_service:
+        return 0.0
+
     if reserve_duty:
-        return RESERVE_DUTY_AMOUNT
-    base = attendance_amount or 0.0
-    extras_total = sum(EXTRA_AMOUNTS[key] for key, checked in extras.items() if checked)
-    return base + extras_total
+        base = RESERVE_DUTY_AMOUNT
+    else:
+        extras_total = sum(EXTRA_AMOUNTS[key] for key, checked in extras.items() if checked)
+        base = (attendance_amount or 0.0) + extras_total
+
+    return (
+        base
+        + (special_arrangement_amount or 0.0)
+        + (bonus_amount or 0.0)
+        + (manual_adjustment_amount or 0.0)
+    )

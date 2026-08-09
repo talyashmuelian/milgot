@@ -44,6 +44,16 @@ class MonthlyRecord(db.Model):
     review_test = db.Column(db.Boolean, nullable=False, default=False)
     enrichment = db.Column(db.Boolean, nullable=False, default=False)
     reserve_duty = db.Column(db.Boolean, nullable=False, default=False)
+    regular_service = db.Column(db.Boolean, nullable=False, default=False)
+
+    special_arrangement_amount = db.Column(db.Float, nullable=True)
+    special_arrangement_note = db.Column(db.Text, nullable=True)
+    bonus_amount = db.Column(db.Float, nullable=True)
+    bonus_note = db.Column(db.Text, nullable=True)
+    manual_adjustment_amount = db.Column(db.Float, nullable=True)
+    manual_adjustment_note = db.Column(db.Text, nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+
     total_amount = db.Column(db.Float, nullable=True)
 
     def to_dict(self):
@@ -62,6 +72,14 @@ class MonthlyRecord(db.Model):
             "review_test": self.review_test,
             "enrichment": self.enrichment,
             "reserve_duty": self.reserve_duty,
+            "regular_service": self.regular_service,
+            "special_arrangement_amount": self.special_arrangement_amount,
+            "special_arrangement_note": self.special_arrangement_note,
+            "bonus_amount": self.bonus_amount,
+            "bonus_note": self.bonus_note,
+            "manual_adjustment_amount": self.manual_adjustment_amount,
+            "manual_adjustment_note": self.manual_adjustment_note,
+            "notes": self.notes,
             "total_amount": self.total_amount,
         }
 
