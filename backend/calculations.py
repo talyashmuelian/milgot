@@ -8,18 +8,15 @@ lowest threshold, the stipend is 0.
 Extras: each checked item adds a fixed amount on top of the attendance
 stipend.
 
-Regular military service (שירות צבאי סדיר): overrides everything -
-total is 0, no exceptions (not even the bonus/arrangement/adjustment
-below).
-
-Reserve duty (מילואים): overrides the attendance+extras calculation
-with a flat amount, but the special-arrangement/bonus/manual-adjustment
-line items below still stack on top of it.
+Regular military service (שירות צבאי סדיר) and reserve duty (מילואים)
+each override the attendance+extras calculation with a flat base (0
+and RESERVE_DUTY_AMOUNT respectively) - only one can apply, regular
+service takes priority if both are somehow checked.
 
 Special arrangement / bonus / manual adjustment: three independent
 optional line items that add on top of whatever base applies (normal
-attendance+extras, or the flat reserve-duty amount). Only the manual
-adjustment is expected to ever be negative.
+attendance+extras, or one of the flat overrides above). Only the
+manual adjustment is expected to ever be negative.
 """
 
 ATTENDANCE_TIERS = [
@@ -81,9 +78,8 @@ def calculate_total_stipend(
     manual_adjustment_amount,
 ):
     if regular_service:
-        return 0.0
-
-    if reserve_duty:
+        base = 0.0
+    elif reserve_duty:
         base = RESERVE_DUTY_AMOUNT
     else:
         extras_total = sum(EXTRA_AMOUNTS[key] for key, checked in extras.items() if checked)

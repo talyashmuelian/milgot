@@ -204,7 +204,8 @@ export default function RecordPanel({
             checked={regularService}
             onChange={(e) => setRegularService(e.target.checked)}
           />
-          היה בשירות צבאי סדיר החודש (מבטל את המלגה לגמרי — לא מקבל כלום)
+          היה בשירות צבאי סדיר החודש (מבטל את חישוב הנוכחות והתוספות, אך בונוס/הסדר/התאמה עדיין
+          מתווספים אם מולאו)
         </label>
 
         <div className="field-row">
