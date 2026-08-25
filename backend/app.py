@@ -9,7 +9,7 @@ from sqlalchemy import inspect, text
 from calculations import EXTRA_FIELDS, calculate_attendance_stipend, calculate_total_stipend
 from excel import build_avrech_report_xlsx, build_month_report_xlsx
 from holidays import month_calendar
-from models import Avrech, DayExclusion, MonthHours, MonthlyRecord, db
+from models import Avrech, AvrechUpdate, DayExclusion, MonthHours, MonthlyRecord, db
 from pdf import build_avrech_report_pdf, build_month_report_pdf, build_record_pdf
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -146,7 +146,61 @@ def delete_avrech(avrech_id):
     """Permanent delete - only reachable from the archive in the UI."""
     avrech = Avrech.query.get_or_404(avrech_id)
     MonthlyRecord.query.filter_by(avrech_id=avrech_id).delete()
+    AvrechUpdate.query.filter_by(avrech_id=avrech_id).delete()
     db.session.delete(avrech)
+    db.session.commit()
+    return "", 204
+
+
+# ---------- Cards (avrech updates) ----------
+
+@app.get("/api/cards")
+def list_cards():
+    avreichim = Avrech.query.filter_by(archived=False).order_by(Avrech.name).all()
+    updates_by_avrech = {}
+    for u in AvrechUpdate.query.order_by(AvrechUpdate.created_at.desc()).all():
+        updates_by_avrech.setdefault(u.avrech_id, []).append(u.to_dict())
+
+    return jsonify(
+        [
+            {**a.to_dict(), "updates": updates_by_avrech.get(a.id, [])}
+            for a in avreichim
+        ]
+    )
+
+
+@app.post("/api/avreichim/<int:avrech_id>/updates")
+def create_avrech_update(avrech_id):
+    Avrech.query.get_or_404(avrech_id)
+    data = request.get_json(force=True)
+    text_value = (data.get("text") or "").strip()
+    if not text_value:
+        return jsonify({"error": "text is required"}), 400
+
+    update = AvrechUpdate(avrech_id=avrech_id, text=text_value)
+    db.session.add(update)
+    db.session.commit()
+    return jsonify(update.to_dict()), 201
+
+
+@app.put("/api/updates/<int:update_id>")
+def update_avrech_update(update_id):
+    update = AvrechUpdate.query.get_or_404(update_id)
+    data = request.get_json(force=True)
+    text_value = (data.get("text") or "").strip()
+    if not text_value:
+        return jsonify({"error": "text is required"}), 400
+
+    update.text = text_value
+    update.updated_at = datetime.datetime.utcnow()
+    db.session.commit()
+    return jsonify(update.to_dict())
+
+
+@app.delete("/api/updates/<int:update_id>")
+def delete_avrech_update(update_id):
+    update = AvrechUpdate.query.get_or_404(update_id)
+    db.session.delete(update)
     db.session.commit()
     return "", 204
 
@@ -442,6 +496,7 @@ def backup():
     records = MonthlyRecord.query.all()
     month_hours = MonthHours.query.all()
     exclusions = DayExclusion.query.all()
+    updates = AvrechUpdate.query.all()
 
     data = {
         "version": 1,
@@ -453,6 +508,7 @@ def backup():
         "monthly_records": [r.to_dict() for r in records],
         "month_hours": [{"year": mh.year, "month": mh.month, "hours": mh.hours} for mh in month_hours],
         "day_exclusions": [e.to_dict() for e in exclusions],
+        "avrech_updates": [u.to_dict() for u in updates],
     }
 
     payload = json.dumps(data, ensure_ascii=False, indent=2)
@@ -472,6 +528,7 @@ def restore():
 
     try:
         MonthlyRecord.query.delete()
+        AvrechUpdate.query.delete()
         DayExclusion.query.delete()
         MonthHours.query.delete()
         Avrech.query.delete()
@@ -523,6 +580,17 @@ def restore():
                 DayExclusion(date=datetime.date.fromisoformat(e["date"]), excluded_hours=e["excluded_hours"])
             )
 
+        for u in data.get("avrech_updates", []):
+            db.session.add(
+                AvrechUpdate(
+                    id=u["id"],
+                    avrech_id=u["avrech_id"],
+                    text=u["text"],
+                    created_at=datetime.datetime.fromisoformat(u["created_at"]) if u.get("created_at") else None,
+                    updated_at=datetime.datetime.fromisoformat(u["updated_at"]) if u.get("updated_at") else None,
+                )
+            )
+
         db.session.commit()
     except (KeyError, ValueError, TypeError) as exc:
         db.session.rollback()
@@ -533,6 +601,7 @@ def restore():
             "status": "restored",
             "avreichim": len(data["avreichim"]),
             "monthly_records": len(data["monthly_records"]),
+            "avrech_updates": len(data.get("avrech_updates", [])),
         }
     )
 

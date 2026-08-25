@@ -6,6 +6,7 @@ import CalendarPage from "./components/CalendarPage";
 import SummaryPage from "./components/SummaryPage";
 import BackupPage from "./components/BackupPage";
 import ArchivePage from "./components/ArchivePage";
+import CardsPage from "./components/CardsPage";
 import {
   listAvreichim,
   createAvrech,
@@ -102,6 +103,12 @@ export default function App() {
             אברכים
           </button>
           <button
+            className={activeTab === "cards" ? "active" : ""}
+            onClick={() => setActiveTab("cards")}
+          >
+            כרטיסים
+          </button>
+          <button
             className={activeTab === "calendar" ? "active" : ""}
             onClick={() => setActiveTab("calendar")}
           >
@@ -160,6 +167,8 @@ export default function App() {
             onCalculateTotal={handleCalculateTotal}
           />
         </div>
+      ) : activeTab === "cards" ? (
+        <CardsPage />
       ) : activeTab === "calendar" ? (
         <CalendarPage />
       ) : activeTab === "summary" ? (

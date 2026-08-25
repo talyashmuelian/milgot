@@ -128,3 +128,27 @@ export function restoreBackup(data) {
     body: JSON.stringify(data),
   }).then(handle);
 }
+
+export function listCards() {
+  return fetch(`${BASE_URL}/cards`).then(handle);
+}
+
+export function createUpdate(avrechId, text) {
+  return fetch(`${BASE_URL}/avreichim/${avrechId}/updates`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  }).then(handle);
+}
+
+export function editUpdate(updateId, text) {
+  return fetch(`${BASE_URL}/updates/${updateId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  }).then(handle);
+}
+
+export function deleteUpdate(updateId) {
+  return fetch(`${BASE_URL}/updates/${updateId}`, { method: "DELETE" }).then(handle);
+}

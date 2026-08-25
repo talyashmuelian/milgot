@@ -84,6 +84,27 @@ class MonthlyRecord(db.Model):
         }
 
 
+class AvrechUpdate(db.Model):
+    """A free-text, timestamped note attached to an avrech's card."""
+
+    __tablename__ = "avrech_updates"
+
+    id = db.Column(db.Integer, primary_key=True)
+    avrech_id = db.Column(db.Integer, db.ForeignKey("avreichim.id"), nullable=False)
+    text = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
+    updated_at = db.Column(db.DateTime, nullable=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "avrech_id": self.avrech_id,
+            "text": self.text,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
 class MonthHours(db.Model):
     __tablename__ = "month_hours"
     __table_args__ = (db.UniqueConstraint("year", "month", name="uq_year_month"),)
