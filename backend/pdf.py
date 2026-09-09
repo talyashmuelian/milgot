@@ -28,7 +28,9 @@ _font_registered = False
 
 _FONT_CANDIDATES = [
     r"C:\Windows\Fonts\arial.ttf",
-    "/usr/share/fonts/truetype/noto/NotoSansHebrew-Regular.ttf",  # PythonAnywhere
+    # NotoSansHebrew-Regular.ttf on PythonAnywhere is a Hebrew-only subset with
+    # NO digit glyphs (confirmed via fontTools) - numbers render as blank space.
+    # DejaVu Sans has full coverage (digits, Hebrew, ₪, ״) - use it instead.
     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
     "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
 ]
