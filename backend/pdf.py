@@ -167,11 +167,20 @@ FIELD_HEADERS = [
 FIELD_WIDTHS = [w * cm for w in (1.8, 1.9, 2, 1.6, 1.3, 1.3, 1.3, 1.4, 1.7, 1.5, 1.5, 2)]
 
 
+RECORD_MARGIN = 1.5 * cm
+RECORD_CONTENT_WIDTH = A4[0] - 2 * RECORD_MARGIN
+RECORD_LABEL_WIDTH = 5 * cm
+RECORD_VALUE_WIDTH = RECORD_CONTENT_WIDTH - RECORD_LABEL_WIDTH
+
+
 def _record_section_table(rows):
-    """A small 2-column key:value table for one payslip section - label
-    rightmost, value leftmost. Rows may mix plain (already-he'd) strings
-    with Paragraph flowables (for wrapped note text)."""
-    table = Table([list(reversed(r)) for r in rows], colWidths=[8 * cm, 5 * cm])
+    """A 2-column key:value table for one payslip section, spanning the
+    full page content width so its right edge lines up with the note
+    paragraphs below it (label rightmost, value leftmost). Rows may mix
+    plain (already-he'd) strings with Paragraph flowables (wrapped notes)."""
+    table = Table(
+        [list(reversed(r)) for r in rows], colWidths=[RECORD_VALUE_WIDTH, RECORD_LABEL_WIDTH]
+    )
     table.setStyle(
         TableStyle(
             [
@@ -207,13 +216,13 @@ def build_record_pdf(avrech_name, year, month, record):
     sections the user chose to hide for this specific record."""
     _ensure_font()
     buf = io.BytesIO()
-    doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=1.5 * cm, leftMargin=1.5 * cm)
+    doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=RECORD_MARGIN, leftMargin=RECORD_MARGIN)
 
     month_name = MONTH_NAMES[month - 1]
     title = f"תלוש מלגה - {avrech_name} - {month_name} {year}"
     hidden = set(record.get("hidden_sections") or [])
 
-    story = [_title_table(title), Spacer(1, 0.4 * cm)]
+    story = [_title_table(title, width=RECORD_CONTENT_WIDTH), Spacer(1, 0.4 * cm)]
 
     story.append(_record_section_table([[he("שם אברך"), he(avrech_name)]]))
     story.append(Spacer(1, 0.3 * cm))
