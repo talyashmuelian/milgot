@@ -6,7 +6,13 @@ from flask import Flask, Response, jsonify, request, send_file, send_from_direct
 from flask_cors import CORS
 from sqlalchemy import inspect, text
 
-from calculations import EXTRA_FIELDS, calculate_attendance_stipend, calculate_total_stipend
+from calculations import (
+    EXTRA_FIELDS,
+    SECTION_KEYS,
+    calculate_attendance_ratio,
+    calculate_attendance_stipend,
+    calculate_total_stipend,
+)
 from excel import build_avrech_report_xlsx, build_month_report_xlsx
 from holidays import month_calendar
 from models import Avrech, AvrechUpdate, DayExclusion, MonthHours, MonthlyRecord, db
@@ -62,6 +68,7 @@ def _ensure_columns():
             "bonus_note",
             "manual_adjustment_note",
             "notes",
+            "hidden_sections",
         ):
             if col not in record_cols:
                 conn.execute(text(f"ALTER TABLE monthly_records ADD COLUMN {col} TEXT"))
@@ -239,16 +246,24 @@ def _empty_record(avrech_id, year, month):
         "manual_adjustment_amount": None,
         "manual_adjustment_note": None,
         "notes": None,
+        "hidden_sections": [],
         "total_amount": None,
     }
+
+
+def _with_attendance_percentage(record_dict, year, month):
+    ratio = calculate_attendance_ratio(
+        record_dict.get("study_hours"), record_dict.get("excluded_hours"), _expected_hours(year, month)
+    )
+    record_dict["attendance_percentage"] = round(ratio * 100, 1) if ratio is not None else None
+    return record_dict
 
 
 @app.get("/api/records/<int:avrech_id>/<int:year>/<int:month>")
 def get_record(avrech_id, year, month):
     record = MonthlyRecord.query.filter_by(avrech_id=avrech_id, year=year, month=month).first()
-    if record is None:
-        return jsonify(_empty_record(avrech_id, year, month))
-    return jsonify(record.to_dict())
+    data = record.to_dict() if record else _empty_record(avrech_id, year, month)
+    return jsonify(_with_attendance_percentage(data, year, month))
 
 
 def _month_calendar_with_exclusions(year, month):
@@ -292,7 +307,7 @@ def calculate_attendance(avrech_id, year, month):
         study_hours, excluded_hours, _expected_hours(year, month), avrech.children_count
     )
     db.session.commit()
-    return jsonify(record.to_dict())
+    return jsonify(_with_attendance_percentage(record.to_dict(), year, month))
 
 
 @app.post("/api/records/<int:avrech_id>/<int:year>/<int:month>/total")
@@ -313,6 +328,9 @@ def calculate_total(avrech_id, year, month):
     record.manual_adjustment_note = data.get("manual_adjustment_note")
     record.notes = data.get("notes")
 
+    hidden_sections = [s for s in (data.get("hidden_sections") or []) if s in SECTION_KEYS]
+    record.hidden_sections = json.dumps(hidden_sections) if hidden_sections else None
+
     extras = {field: getattr(record, field) for field in EXTRA_FIELDS}
     record.total_amount = calculate_total_stipend(
         record.attendance_amount,
@@ -324,7 +342,7 @@ def calculate_total(avrech_id, year, month):
         record.manual_adjustment_amount,
     )
     db.session.commit()
-    return jsonify(record.to_dict())
+    return jsonify(_with_attendance_percentage(record.to_dict(), year, month))
 
 
 # ---------- Reports (PDF / Excel / JSON) ----------
@@ -364,6 +382,7 @@ def record_pdf(avrech_id, year, month):
     avrech = Avrech.query.get_or_404(avrech_id)
     record = MonthlyRecord.query.filter_by(avrech_id=avrech_id, year=year, month=month).first()
     record_data = record.to_dict() if record else _empty_record(avrech_id, year, month)
+    record_data = _with_attendance_percentage(record_data, year, month)
 
     buf = build_record_pdf(avrech.name, year, month, record_data)
     filename = f"avrech_{avrech_id}_{year}_{month:02d}.pdf"
@@ -568,6 +587,7 @@ def restore():
                     manual_adjustment_amount=r.get("manual_adjustment_amount"),
                     manual_adjustment_note=r.get("manual_adjustment_note"),
                     notes=r.get("notes"),
+                    hidden_sections=json.dumps(r["hidden_sections"]) if r.get("hidden_sections") else None,
                     total_amount=r.get("total_amount"),
                 )
             )

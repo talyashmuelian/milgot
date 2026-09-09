@@ -358,6 +358,34 @@
   margin: -10px 0 18px;
 }
 
+.attendance-percentage-badge {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border-radius: 8px;
+  padding: 8px 14px;
+  align-self: center;
+}
+
+.visibility-panel {
+  background: var(--bg-page);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+
+.visibility-panel-title {
+  font-size: 0.85rem;
+  color: var(--text);
+  margin: 0 0 12px;
+}
+
+.visibility-panel .checkbox-grid {
+  margin-bottom: 0;
+  max-width: none;
+}
+
 .reserve-duty-field {
   display: flex;
   align-items: center;

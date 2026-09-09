@@ -1,3 +1,5 @@
+import json
+
 from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
@@ -54,6 +56,10 @@ class MonthlyRecord(db.Model):
     manual_adjustment_note = db.Column(db.Text, nullable=True)
     notes = db.Column(db.Text, nullable=True)
 
+    # JSON-encoded list of section keys to hide from this record's PDF ("תלוש").
+    # None/empty means everything is shown (the default).
+    hidden_sections = db.Column(db.Text, nullable=True)
+
     total_amount = db.Column(db.Float, nullable=True)
 
     def to_dict(self):
@@ -80,6 +86,7 @@ class MonthlyRecord(db.Model):
             "manual_adjustment_amount": self.manual_adjustment_amount,
             "manual_adjustment_note": self.manual_adjustment_note,
             "notes": self.notes,
+            "hidden_sections": json.loads(self.hidden_sections) if self.hidden_sections else [],
             "total_amount": self.total_amount,
         }
 

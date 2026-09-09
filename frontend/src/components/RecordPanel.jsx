@@ -22,6 +22,24 @@ const EMPTY_CHECKBOXES = {
   with_american: false,
 };
 
+// Matches backend SECTION_LABELS in calculations.py - keep in sync.
+const SECTION_LABELS = [
+  { key: "attendance", label: "נוכחות (שעות ואחוזים)" },
+  { key: "enrichment", label: "העשרות" },
+  { key: "emuna", label: "אמונה" },
+  { key: "tanach", label: 'תנ"ך' },
+  { key: "review_test", label: "מבחן חזרה" },
+  { key: "ktiva", label: "כתיבה" },
+  { key: "gemara_bekiut", label: "גמרא בקיאות" },
+  { key: "with_american", label: "לימוד עם אמריקאי" },
+  { key: "reserve_duty", label: "מילואים" },
+  { key: "regular_service", label: "שירות צבאי סדיר" },
+  { key: "special_arrangement", label: "הסדר מיוחד" },
+  { key: "bonus", label: "בונוס" },
+  { key: "manual_adjustment", label: "התאמה ידנית" },
+  { key: "notes", label: "הערות חופשיות" },
+];
+
 export default function RecordPanel({
   avrechId,
   year,
@@ -43,6 +61,7 @@ export default function RecordPanel({
   const [notes, setNotes] = useState("");
   const [manualAdjustmentAmount, setManualAdjustmentAmount] = useState("");
   const [manualAdjustmentNote, setManualAdjustmentNote] = useState("");
+  const [hiddenSections, setHiddenSections] = useState([]);
   const [expectedHours, setExpectedHours] = useState(null);
   const [savingAttendance, setSavingAttendance] = useState(false);
   const [savingTotal, setSavingTotal] = useState(false);
@@ -69,6 +88,7 @@ export default function RecordPanel({
     setNotes(record.notes ?? "");
     setManualAdjustmentAmount(record.manual_adjustment_amount ?? "");
     setManualAdjustmentNote(record.manual_adjustment_note ?? "");
+    setHiddenSections(record.hidden_sections ?? []);
   }, [record]);
 
   useEffect(() => {
@@ -87,6 +107,12 @@ export default function RecordPanel({
       <main className="record-panel empty-state">
         <p>יש לבחור אברך וחודש כדי להתחיל</p>
       </main>
+    );
+  }
+
+  function toggleSectionVisibility(key) {
+    setHiddenSections((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
     );
   }
 
@@ -116,6 +142,7 @@ export default function RecordPanel({
         notes: notes === "" ? null : notes,
         manual_adjustment_amount: manualAdjustmentAmount === "" ? null : Number(manualAdjustmentAmount),
         manual_adjustment_note: manualAdjustmentNote === "" ? null : manualAdjustmentNote,
+        hidden_sections: hiddenSections,
       });
     } finally {
       setSavingTotal(false);
@@ -154,6 +181,11 @@ export default function RecordPanel({
               onChange={(e) => setExcludedHours(e.target.value)}
             />
           </label>
+          {record.attendance_percentage != null && (
+            <span className="attendance-percentage-badge">
+              {record.attendance_percentage}% נוכחות
+            </span>
+          )}
         </div>
 
         {expectedHours != null && (
@@ -266,6 +298,22 @@ export default function RecordPanel({
               onChange={(e) => setManualAdjustmentNote(e.target.value)}
             />
           </label>
+        </div>
+
+        <div className="visibility-panel">
+          <p className="visibility-panel-title">מה להציג בתלוש ה-PDF (ברירת מחדל: הכול מוצג)</p>
+          <div className="checkbox-grid">
+            {SECTION_LABELS.map(({ key, label }) => (
+              <label key={key} className="checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={!hiddenSections.includes(key)}
+                  onChange={() => toggleSectionVisibility(key)}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
         </div>
 
         <div className="field-row calc-row">

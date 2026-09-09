@@ -9,14 +9,17 @@ since they render correctly without reordering.
 
 import io
 import os
+import textwrap
 
 from bidi import get_display
 from reportlab.lib import colors
+from reportlab.lib.enums import TA_RIGHT
 from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import cm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Spacer
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 
 from months import MONTH_NAMES
 
@@ -61,6 +64,30 @@ def _amount(value):
 
 def _yesno(value):
     return he("כן") if value else he("לא")
+
+
+def _percentage(value):
+    return "-" if value is None else f"{value:g}%"
+
+
+_NOTE_LABEL_STYLE = ParagraphStyle(
+    "note-label", fontName=FONT_NAME, fontSize=10, alignment=TA_RIGHT, spaceAfter=2
+)
+_NOTE_TEXT_STYLE = ParagraphStyle(
+    "note-text", fontName=FONT_NAME, fontSize=10, alignment=TA_RIGHT, leading=14
+)
+
+
+def _note_flowables(label, text):
+    """A bold label followed by the note text, each line pre-wrapped and
+    bidi-reordered individually so multi-line notes stay in the right order
+    (wrapping the already-reordered text as one block would flip line order)."""
+    lines = textwrap.wrap(str(text), width=60) or [""]
+    html = "<br/>".join(he(line) for line in lines)
+    return [
+        Paragraph(f"<b>{he(label)}:</b>", _NOTE_LABEL_STYLE),
+        Paragraph(html, _NOTE_TEXT_STYLE),
+    ]
 
 
 def _title_table(text, width=17 * cm):
@@ -138,24 +165,131 @@ FIELD_HEADERS = [
 FIELD_WIDTHS = [w * cm for w in (1.8, 1.9, 2, 1.6, 1.3, 1.3, 1.3, 1.4, 1.7, 1.5, 1.5, 2)]
 
 
+def _record_section_table(rows):
+    """A small 2-column key:value table for one payslip section - label
+    rightmost, value leftmost. Rows may mix plain (already-he'd) strings
+    with Paragraph flowables (for wrapped note text)."""
+    table = Table([list(reversed(r)) for r in rows], colWidths=[8 * cm, 5 * cm])
+    table.setStyle(
+        TableStyle(
+            [
+                ("FONTNAME", (0, 0), (-1, -1), FONT_NAME),
+                ("FONTSIZE", (0, 0), (-1, -1), 10),
+                ("ALIGN", (0, 0), (-1, -1), "RIGHT"),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ]
+        )
+    )
+    return table
+
+
+# The extras checkboxes shown on a payslip, in the same order as the
+# calculator UI. Keep in sync with calculations.EXTRA_AMOUNTS ordering.
+_EXTRA_SECTION_LABELS = [
+    ("enrichment", "העשרות"),
+    ("emuna", "אמונה"),
+    ("tanach", 'תנ"ך'),
+    ("review_test", "מבחן חזרה"),
+    ("ktiva", "כתיבה"),
+    ("gemara_bekiut", "גמרא בקיאות"),
+    ("with_american", "לימוד עם אמריקאי"),
+]
+
+
 def build_record_pdf(avrech_name, year, month, record):
+    """The per-avrech, per-month payslip ("תלוש"). Shows every part of the
+    calculator - amounts, checkboxes, and any free text written in - except
+    sections the user chose to hide for this specific record."""
     _ensure_font()
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=1.5 * cm, leftMargin=1.5 * cm)
 
     month_name = MONTH_NAMES[month - 1]
-    title = f"פרטי מלגה - {avrech_name} - {month_name} {year}"
+    title = f"תלוש מלגה - {avrech_name} - {month_name} {year}"
+    hidden = set(record.get("hidden_sections") or [])
 
-    header = [he("שדה"), he("ערך")]
-    labels = [he("שם אברך")] + [he(h) for h in FIELD_HEADERS]
-    values = [he(avrech_name)] + _record_fields(record)
-    rows = [[label, value] for label, value in zip(labels, values)]
+    story = [_title_table(title), Spacer(1, 0.4 * cm)]
 
-    story = [
-        _title_table(title),
-        Spacer(1, 0.5 * cm),
-        _data_table(header, rows, [5 * cm, 8 * cm]),
+    story.append(_record_section_table([[he("שם אברך"), he(avrech_name)]]))
+    story.append(Spacer(1, 0.3 * cm))
+
+    if "attendance" not in hidden:
+        story.append(
+            _record_section_table(
+                [
+                    [he("שעות לימוד"), _hours(record.get("study_hours"))],
+                    [he("שעות מוחרגות"), _hours(record.get("excluded_hours"))],
+                    [he("אחוז נוכחות"), _percentage(record.get("attendance_percentage"))],
+                    [he("מלגת נוכחות"), _amount(record.get("attendance_amount"))],
+                ]
+            )
+        )
+        story.append(Spacer(1, 0.3 * cm))
+
+    extras_rows = [
+        [he(label), _yesno(record.get(key))]
+        for key, label in _EXTRA_SECTION_LABELS
+        if key not in hidden
     ]
+    if extras_rows:
+        story.append(_record_section_table(extras_rows))
+        story.append(Spacer(1, 0.3 * cm))
+
+    if "reserve_duty" not in hidden:
+        story.append(_record_section_table([[he("מילואים"), _yesno(record.get("reserve_duty"))]]))
+        story.append(Spacer(1, 0.3 * cm))
+
+    if "regular_service" not in hidden:
+        story.append(
+            _record_section_table([[he("שירות צבאי סדיר"), _yesno(record.get("regular_service"))]])
+        )
+        story.append(Spacer(1, 0.3 * cm))
+
+    if "special_arrangement" not in hidden:
+        story.append(
+            _record_section_table(
+                [[he("הסדר מיוחד - סכום"), _amount(record.get("special_arrangement_amount"))]]
+            )
+        )
+        if record.get("special_arrangement_note"):
+            story.append(Spacer(1, 0.15 * cm))
+            story.extend(_note_flowables("פירוט ההסדר", record["special_arrangement_note"]))
+        story.append(Spacer(1, 0.3 * cm))
+
+    if "bonus" not in hidden:
+        story.append(
+            _record_section_table([[he("בונוס - סכום"), _amount(record.get("bonus_amount"))]])
+        )
+        if record.get("bonus_note"):
+            story.append(Spacer(1, 0.15 * cm))
+            story.extend(_note_flowables("הערה לבונוס", record["bonus_note"]))
+        story.append(Spacer(1, 0.3 * cm))
+
+    if "manual_adjustment" not in hidden:
+        story.append(
+            _record_section_table(
+                [[he("התאמה ידנית - סכום"), _amount(record.get("manual_adjustment_amount"))]]
+            )
+        )
+        if record.get("manual_adjustment_note"):
+            story.append(Spacer(1, 0.15 * cm))
+            story.extend(_note_flowables("פירוט ההתאמה", record["manual_adjustment_note"]))
+        story.append(Spacer(1, 0.3 * cm))
+
+    if "notes" not in hidden and record.get("notes"):
+        story.extend(_note_flowables("הערות חופשיות", record["notes"]))
+        story.append(Spacer(1, 0.3 * cm))
+
+    story.append(Spacer(1, 0.2 * cm))
+    total_table = _record_section_table([[he('סה"כ מלגה'), _amount(record.get("total_amount"))]])
+    total_table.setStyle(
+        TableStyle([("FONTSIZE", (0, 0), (-1, -1), 13), ("FONTNAME", (0, 0), (-1, -1), FONT_NAME)])
+    )
+    story.append(total_table)
+
     doc.build(story)
     buf.seek(0)
     return buf

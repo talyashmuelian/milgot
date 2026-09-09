@@ -48,22 +48,49 @@ EXTRA_FIELDS = list(EXTRA_AMOUNTS.keys())
 
 RESERVE_DUTY_AMOUNT = 500.0
 
+# The parts a per-record PDF ("תלוש") can show or hide; each maps to a
+# checkbox in the UI and a Hebrew label used both there and in the PDF.
+SECTION_LABELS = {
+    "attendance": "נוכחות (שעות ואחוזים)",
+    "enrichment": "העשרות",
+    "emuna": "אמונה",
+    "tanach": 'תנ"ך',
+    "review_test": "מבחן חזרה",
+    "ktiva": "כתיבה",
+    "gemara_bekiut": "גמרא בקיאות",
+    "with_american": "לימוד עם אמריקאי",
+    "reserve_duty": "מילואים",
+    "regular_service": "שירות צבאי סדיר",
+    "special_arrangement": "הסדר מיוחד",
+    "bonus": "בונוס",
+    "manual_adjustment": "התאמה ידנית",
+    "notes": "הערות חופשיות",
+}
+SECTION_KEYS = list(SECTION_LABELS.keys())
 
-def calculate_attendance_stipend(study_hours, excluded_hours, expected_hours, children_count):
+
+def calculate_attendance_ratio(study_hours, excluded_hours, expected_hours):
+    """The attendance ratio (0-1) used to pick a tier, or None if not computable."""
     if not expected_hours:
-        return 0.0
+        return None
     denominator = expected_hours - (excluded_hours or 0)
     if denominator <= 0:
+        return None
+    return (study_hours or 0) / denominator
+
+
+def calculate_attendance_stipend(study_hours, excluded_hours, expected_hours, children_count):
+    ratio = calculate_attendance_ratio(study_hours, excluded_hours, expected_hours)
+    if ratio is None:
         return 0.0
 
-    percentage = (study_hours or 0) / denominator
     tiers = (
         ATTENDANCE_TIERS_MANY_CHILDREN
         if (children_count or 0) >= MANY_CHILDREN_THRESHOLD
         else ATTENDANCE_TIERS
     )
     for threshold, amount in tiers:
-        if percentage >= threshold:
+        if ratio >= threshold:
             return amount
     return 0.0
 
