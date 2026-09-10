@@ -163,6 +163,7 @@ function AccountLedger({ avrech, onChanged }) {
 }
 
 function AvrechCard({ avrech, onChanged }) {
+  const [open, setOpen] = useState(false);
   const [newText, setNewText] = useState("");
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -203,77 +204,95 @@ function AvrechCard({ avrech, onChanged }) {
   }
 
   return (
-    <div className="avrech-card">
-      <div className="avrech-card-header">
+    <div className={`avrech-card ${open ? "open" : "collapsed"}`}>
+      <button
+        type="button"
+        className="avrech-card-header"
+        onClick={() => setOpen((prev) => !prev)}
+        aria-expanded={open}
+      >
+        <span className="card-toggle-arrow">{open ? "▾" : "◂"}</span>
         <h3>{avrech.name}</h3>
         {avrech.children_count > 0 && (
           <span className="children-badge">({avrech.children_count})</span>
         )}
         {avrech.card_only && <span className="card-only-badge">כרטיס בלבד</span>}
-      </div>
+      </button>
 
-      <form className="update-form" onSubmit={handleAdd}>
-        <textarea
-          rows={2}
-          placeholder="הוסף עדכון..."
-          value={newText}
-          onChange={(e) => setNewText(e.target.value)}
-        />
-        <button type="submit" disabled={adding || !newText.trim()}>
-          {adding ? "מוסיף..." : "הוסף עדכון"}
-        </button>
-      </form>
+      {open && (
+        <div className="avrech-card-body">
+          <form className="update-form" onSubmit={handleAdd}>
+            <textarea
+              rows={2}
+              placeholder="הוסף עדכון..."
+              value={newText}
+              onChange={(e) => setNewText(e.target.value)}
+            />
+            <button type="submit" disabled={adding || !newText.trim()}>
+              {adding ? "מוסיף..." : "הוסף עדכון"}
+            </button>
+          </form>
 
-      <ul className="update-list">
-        {avrech.updates.length === 0 && <li className="update-empty">אין עדכונים עדיין.</li>}
-        {avrech.updates.map((update) => (
-          <li key={update.id} className="update-item">
-            {editingId === update.id ? (
-              <form className="update-edit-form" onSubmit={submitEdit}>
-                <textarea
-                  rows={2}
-                  autoFocus
-                  value={editingText}
-                  onChange={(e) => setEditingText(e.target.value)}
-                />
-                <div className="update-edit-actions">
-                  <button type="submit" className="icon-btn" title="שמור">
-                    ✓
-                  </button>
-                  <button
-                    type="button"
-                    className="icon-btn"
-                    title="בטל"
-                    onClick={() => setEditingId(null)}
-                  >
-                    ✕
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <>
-                <p className="update-text">{update.text}</p>
-                <div className="update-meta">
-                  <span>
-                    {formatDate(update.created_at)}
-                    {update.updated_at && ` (עודכן ב-${formatDate(update.updated_at)})`}
-                  </span>
-                  <span className="row-actions">
-                    <button className="icon-btn" title="ערוך" onClick={() => startEdit(update)}>
-                      ✎
-                    </button>
-                    <button className="icon-btn" title="מחק" onClick={() => handleDelete(update)}>
-                      🗑
-                    </button>
-                  </span>
-                </div>
-              </>
-            )}
-          </li>
-        ))}
-      </ul>
+          <ul className="update-list">
+            {avrech.updates.length === 0 && <li className="update-empty">אין עדכונים עדיין.</li>}
+            {avrech.updates.map((update) => (
+              <li key={update.id} className="update-item">
+                {editingId === update.id ? (
+                  <form className="update-edit-form" onSubmit={submitEdit}>
+                    <textarea
+                      rows={2}
+                      autoFocus
+                      value={editingText}
+                      onChange={(e) => setEditingText(e.target.value)}
+                    />
+                    <div className="update-edit-actions">
+                      <button type="submit" className="icon-btn" title="שמור">
+                        ✓
+                      </button>
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        title="בטל"
+                        onClick={() => setEditingId(null)}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                    <p className="update-text">{update.text}</p>
+                    <div className="update-meta">
+                      <span>
+                        {formatDate(update.created_at)}
+                        {update.updated_at && ` (עודכן ב-${formatDate(update.updated_at)})`}
+                      </span>
+                      <span className="row-actions">
+                        <button
+                          className="icon-btn"
+                          title="ערוך"
+                          onClick={() => startEdit(update)}
+                        >
+                          ✎
+                        </button>
+                        <button
+                          className="icon-btn"
+                          title="מחק"
+                          onClick={() => handleDelete(update)}
+                        >
+                          🗑
+                        </button>
+                      </span>
+                    </div>
+                  </>
+                )}
+              </li>
+            ))}
+          </ul>
 
-      <AccountLedger avrech={avrech} onChanged={onChanged} />
+          <AccountLedger avrech={avrech} onChanged={onChanged} />
+        </div>
+      )}
     </div>
   );
 }

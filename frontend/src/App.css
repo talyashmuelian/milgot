@@ -1003,27 +1003,48 @@ textarea:focus {
 
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .cards-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .avrech-card {
   background: var(--bg);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: 20px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 14px;
 }
 
 .avrech-card-header {
   display: flex;
   align-items: baseline;
   gap: 6px;
+  width: 100%;
+  background: none;
+  border: none;
+  font: inherit;
+  cursor: pointer;
+  padding: 16px 20px;
+  text-align: start;
+  color: inherit;
+}
+
+.avrech-card.open .avrech-card-header {
   border-bottom: 1px solid var(--border);
-  padding-bottom: 10px;
+}
+
+.card-toggle-arrow {
+  color: var(--accent);
+  font-size: 0.85rem;
+  flex: 0 0 auto;
 }
 
 .avrech-card-header h3 {
@@ -1031,6 +1052,13 @@ textarea:focus {
   font-size: 1.1rem;
   font-weight: 600;
   color: var(--text-h);
+}
+
+.avrech-card-body {
+  padding: 0 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .update-form {
