@@ -16,7 +16,7 @@ from calculations import (
 from excel import build_avrech_report_xlsx, build_month_report_xlsx
 from holidays import month_calendar
 from models import Avrech, AvrechUpdate, DayExclusion, LedgerEntry, MonthHours, MonthlyRecord, db
-from pdf import build_avrech_report_pdf, build_month_report_pdf, build_record_pdf
+from pdf import build_avrech_card_pdf, build_avrech_report_pdf, build_month_report_pdf, build_record_pdf
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIST = os.path.join(BASE_DIR, "..", "frontend", "dist")
@@ -189,6 +189,22 @@ def list_cards():
             for a in avreichim
         ]
     )
+
+
+@app.get("/api/avreichim/<int:avrech_id>/card/pdf")
+def avrech_card_pdf(avrech_id):
+    avrech = Avrech.query.get_or_404(avrech_id)
+    updates = [
+        u.to_dict()
+        for u in AvrechUpdate.query.filter_by(avrech_id=avrech_id).order_by(AvrechUpdate.created_at.desc()).all()
+    ]
+    ledger_entries = [
+        e.to_dict()
+        for e in LedgerEntry.query.filter_by(avrech_id=avrech_id).order_by(LedgerEntry.date, LedgerEntry.id).all()
+    ]
+    buf = build_avrech_card_pdf(avrech.name, updates, ledger_entries)
+    filename = f"card_{avrech_id}.pdf"
+    return send_file(buf, mimetype="application/pdf", as_attachment=True, download_name=filename)
 
 
 @app.post("/api/avreichim/<int:avrech_id>/updates")
@@ -437,6 +453,17 @@ def calculate_total(avrech_id, year, month):
 
 # ---------- Reports (PDF / Excel / JSON) ----------
 
+def _with_attendance_percentage_if_recorded(record_dict, year, month):
+    """Like _with_attendance_percentage, but leaves attendance_percentage as
+    None when no attendance was ever entered for this record - otherwise
+    calculate_attendance_ratio treats missing study_hours as 0, which would
+    show as a misleading "0%" and skew averages over rows with no data at all."""
+    if record_dict.get("study_hours") is None:
+        record_dict["attendance_percentage"] = None
+        return record_dict
+    return _with_attendance_percentage(record_dict, year, month)
+
+
 def _month_report_rows(year, month):
     """list of (avrech_name, record_dict), one per non-archived avrech, ordered by name."""
     avreichim = (
@@ -449,9 +476,13 @@ def _month_report_rows(year, month):
     return [
         (
             a.name,
-            records_by_avrech[a.id].to_dict()
-            if a.id in records_by_avrech
-            else _empty_record(a.id, year, month),
+            _with_attendance_percentage_if_recorded(
+                records_by_avrech[a.id].to_dict()
+                if a.id in records_by_avrech
+                else _empty_record(a.id, year, month),
+                year,
+                month,
+            ),
         )
         for a in avreichim
     ]
@@ -464,7 +495,11 @@ def _avrech_report_rows(avrech_id, year):
         for r in MonthlyRecord.query.filter_by(avrech_id=avrech_id, year=year).all()
     }
     return [
-        records_by_month[m].to_dict() if m in records_by_month else _empty_record(avrech_id, year, m)
+        _with_attendance_percentage_if_recorded(
+            records_by_month[m].to_dict() if m in records_by_month else _empty_record(avrech_id, year, m),
+            year,
+            m,
+        )
         for m in range(1, 13)
     ]
 

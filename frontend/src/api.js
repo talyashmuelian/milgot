@@ -143,6 +143,10 @@ export function listCards() {
   return fetch(`${BASE_URL}/cards`).then(handle);
 }
 
+export function cardPdfUrl(avrechId) {
+  return `${BASE_URL}/avreichim/${avrechId}/card/pdf`;
+}
+
 export function createUpdate(avrechId, text) {
   return fetch(`${BASE_URL}/avreichim/${avrechId}/updates`, {
     method: "POST",

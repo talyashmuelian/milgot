@@ -8,6 +8,7 @@ import {
   createLedgerEntry,
   editLedgerEntry,
   deleteLedgerEntry,
+  cardPdfUrl,
 } from "../api";
 
 function formatDate(iso) {
@@ -205,19 +206,28 @@ function AvrechCard({ avrech, onChanged }) {
 
   return (
     <div className={`avrech-card ${open ? "open" : "collapsed"}`}>
-      <button
-        type="button"
-        className="avrech-card-header"
-        onClick={() => setOpen((prev) => !prev)}
-        aria-expanded={open}
-      >
-        <span className="card-toggle-arrow">{open ? "▾" : "◂"}</span>
-        <h3>{avrech.name}</h3>
-        {avrech.children_count > 0 && (
-          <span className="children-badge">({avrech.children_count})</span>
-        )}
-        {avrech.card_only && <span className="card-only-badge">כרטיס בלבד</span>}
-      </button>
+      <div className="avrech-card-header">
+        <button
+          type="button"
+          className="avrech-card-toggle"
+          onClick={() => setOpen((prev) => !prev)}
+          aria-expanded={open}
+        >
+          <span className="card-toggle-arrow">{open ? "▾" : "◂"}</span>
+          <h3>{avrech.name}</h3>
+          {avrech.children_count > 0 && (
+            <span className="children-badge">({avrech.children_count})</span>
+          )}
+          {avrech.card_only && <span className="card-only-badge">כרטיס בלבד</span>}
+        </button>
+        <button
+          type="button"
+          className="pdf-link card-pdf-link"
+          onClick={() => window.open(cardPdfUrl(avrech.id), "_blank")}
+        >
+          הורד PDF
+        </button>
+      </div>
 
       {open && (
         <div className="avrech-card-body">

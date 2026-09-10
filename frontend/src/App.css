@@ -823,6 +823,17 @@ textarea:focus {
   text-align: start !important;
 }
 
+.summary-average-row {
+  background: var(--accent-bg);
+  font-weight: 700;
+}
+
+.summary-average-row td {
+  border-top: 2px solid var(--accent-border);
+  border-bottom: none;
+  color: var(--text-h);
+}
+
 .average-controls {
   flex-wrap: wrap;
   row-gap: 8px;
@@ -1025,20 +1036,34 @@ textarea:focus {
 
 .avrech-card-header {
   display: flex;
-  align-items: baseline;
-  gap: 6px;
+  align-items: center;
+  gap: 8px;
   width: 100%;
-  background: none;
-  border: none;
-  font: inherit;
-  cursor: pointer;
+  box-sizing: border-box;
   padding: 16px 20px;
-  text-align: start;
-  color: inherit;
 }
 
 .avrech-card.open .avrech-card-header {
   border-bottom: 1px solid var(--border);
+}
+
+.avrech-card-toggle {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+  text-align: start;
+  color: inherit;
+}
+
+.card-pdf-link {
+  flex: 0 0 auto;
 }
 
 .card-toggle-arrow {

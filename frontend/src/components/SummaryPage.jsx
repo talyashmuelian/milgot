@@ -12,6 +12,7 @@ import {
 const COLUMNS = [
   { key: "study_hours", label: "שעות לימוד", type: "number" },
   { key: "excluded_hours", label: "שעות מוחרגות", type: "number" },
+  { key: "attendance_percentage", label: "אחוז נוכחות", type: "percentage" },
   { key: "attendance_amount", label: "מלגת נוכחות", type: "amount" },
   { key: "with_american", label: "עם אמריקאי", type: "bool" },
   { key: "emuna", label: "אמונה", type: "bool" },
@@ -35,6 +36,9 @@ function Cell({ column, record }) {
   }
   if (column.type === "amount") {
     return <td className="amount-cell">{value != null ? `₪${value}` : "-"}</td>;
+  }
+  if (column.type === "percentage") {
+    return <td>{value != null ? `${value}%` : "-"}</td>;
   }
   return <td>{value != null ? value : "-"}</td>;
 }
@@ -111,6 +115,14 @@ export default function SummaryPage() {
     mode === "month"
       ? (monthRows || []).map((r) => ({ label: r.name, record: r }))
       : (avrechData?.months || []).map((r) => ({ label: MONTH_NAMES[r.month - 1], record: r }));
+
+  const attendancePercentages = rows
+    .map((r) => r.record.attendance_percentage)
+    .filter((v) => v != null);
+  const averageAttendancePercentage =
+    attendancePercentages.length > 0
+      ? Math.round((attendancePercentages.reduce((a, b) => a + b, 0) / attendancePercentages.length) * 10) / 10
+      : null;
 
   return (
     <main className="summary-page">
@@ -293,6 +305,18 @@ export default function SummaryPage() {
                 </tr>
               ))}
             </tbody>
+            <tfoot>
+              <tr className="summary-average-row">
+                <td className="row-label-cell">ממוצע</td>
+                {COLUMNS.map((col) => (
+                  <Cell
+                    key={col.key}
+                    column={col}
+                    record={{ attendance_percentage: averageAttendancePercentage }}
+                  />
+                ))}
+              </tr>
+            </tfoot>
           </table>
         )}
       </div>

@@ -7,6 +7,7 @@ each string into its correct visual order; plain numbers are left alone
 since they render correctly without reordering.
 """
 
+import datetime
 import io
 import os
 import textwrap
@@ -84,6 +85,21 @@ _NOTE_LABEL_STYLE = ParagraphStyle(
 _NOTE_TEXT_STYLE = ParagraphStyle(
     "note-text", fontName=FONT_NAME, fontSize=10, alignment=TA_RIGHT, leading=14
 )
+_SECTION_HEADER_STYLE = ParagraphStyle(
+    "section-header", fontName=FONT_NAME, fontSize=13, alignment=TA_RIGHT, spaceBefore=4, spaceAfter=6
+)
+_SUBSECTION_HEADER_STYLE = ParagraphStyle(
+    "subsection-header", fontName=FONT_NAME, fontSize=11, alignment=TA_RIGHT, spaceAfter=4
+)
+
+
+def _format_dt(iso_string):
+    if not iso_string:
+        return "-"
+    try:
+        return datetime.datetime.fromisoformat(iso_string).strftime("%d/%m/%Y %H:%M")
+    except ValueError:
+        return iso_string
 
 
 def _note_flowables(label, text):
@@ -362,6 +378,64 @@ def build_avrech_report_pdf(avrech_name, year, records_by_month):
         Spacer(1, 0.5 * cm),
         _data_table(header, rows, [2.5 * cm] + FIELD_WIDTHS, font_size=8),
     ]
+    doc.build(story)
+    buf.seek(0)
+    return buf
+
+
+def _ledger_table(entries):
+    header = [he("תאריך"), he("סכום"), he("הערה")]
+    rows = [
+        [e.get("date") or "-", _amount(e.get("amount")), he(e.get("note") or "-")]
+        for e in entries
+    ]
+    note_width = RECORD_CONTENT_WIDTH - 6 * cm
+    return _data_table(header, rows, [3 * cm, 3 * cm, note_width], font_size=9)
+
+
+def build_avrech_card_pdf(avrech_name, updates, ledger_entries):
+    """A printable version of one avrech's card from the Cards tab: the
+    free-text updates plus the full charge/credit ledger ("דף חשבון")."""
+    _ensure_font()
+    buf = io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=RECORD_MARGIN, leftMargin=RECORD_MARGIN)
+
+    story = [_title_table(f"כרטיס אברך - {avrech_name}", width=RECORD_CONTENT_WIDTH), Spacer(1, 0.3 * cm)]
+
+    story.append(Paragraph(he("עדכונים"), _SECTION_HEADER_STYLE))
+    if updates:
+        for update in updates:
+            story.extend(_note_flowables(_format_dt(update.get("created_at")), update["text"]))
+            story.append(Spacer(1, 0.2 * cm))
+    else:
+        story.append(Paragraph(he("אין עדכונים."), _NOTE_TEXT_STYLE))
+    story.append(Spacer(1, 0.3 * cm))
+
+    story.append(Paragraph(he("דף חשבון"), _SECTION_HEADER_STYLE))
+
+    charges = [e for e in ledger_entries if e.get("kind") == "charge"]
+    credits = [e for e in ledger_entries if e.get("kind") == "credit"]
+
+    story.append(Paragraph(he("חיובים"), _SUBSECTION_HEADER_STYLE))
+    story.append(_ledger_table(charges) if charges else Paragraph(he("אין שורות."), _NOTE_TEXT_STYLE))
+    story.append(Spacer(1, 0.3 * cm))
+
+    story.append(Paragraph(he("זיכויים"), _SUBSECTION_HEADER_STYLE))
+    story.append(_ledger_table(credits) if credits else Paragraph(he("אין שורות."), _NOTE_TEXT_STYLE))
+    story.append(Spacer(1, 0.3 * cm))
+
+    total_charges = sum(e["amount"] for e in charges)
+    total_credits = sum(e["amount"] for e in credits)
+    story.append(
+        _record_section_table(
+            [
+                [he('סה"כ חיובים'), _amount(total_charges)],
+                [he('סה"כ זיכויים'), _amount(total_credits)],
+                [he("יתרה כוללת"), _amount(total_charges - total_credits)],
+            ]
+        )
+    )
+
     doc.build(story)
     buf.seek(0)
     return buf
