@@ -823,6 +823,38 @@ textarea:focus {
   text-align: start !important;
 }
 
+.average-controls {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+
+.average-range-label {
+  color: var(--text);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.average-year-input {
+  width: 80px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font: inherit;
+  background: var(--bg);
+  color: var(--text-h);
+}
+
+.average-headline {
+  padding: 14px 16px;
+  font-size: 1.05rem;
+  color: var(--text-h);
+}
+
+.average-headline strong {
+  color: var(--accent);
+  font-size: 1.2rem;
+}
+
 .amount-cell {
   font-weight: 700;
   color: var(--accent);
@@ -1082,4 +1114,196 @@ textarea:focus {
   display: flex;
   gap: 4px;
   justify-content: flex-end;
+}
+
+.card-only-badge {
+  margin-inline-start: auto;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--bg-page);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
+.add-card-person-toggle {
+  align-self: flex-start;
+  margin-bottom: 20px;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text-h);
+}
+
+.add-card-person-form {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.add-card-person-form input {
+  flex: 1;
+  max-width: 260px;
+}
+
+/* ---------- Account ledger ("דף חשבון") ---------- */
+
+.ledger {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ledger h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.ledger-columns {
+  display: flex;
+  gap: 12px;
+}
+
+.ledger-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--bg-page);
+}
+
+.ledger-col-charge {
+  border-inline-end: 3px solid #c0392b;
+}
+
+.ledger-col-credit {
+  border-inline-end: 3px solid #1a8a4a;
+}
+
+.ledger-col-header {
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.ledger-col-charge .ledger-col-header,
+.ledger-col-charge .ledger-col-total {
+  color: #c0392b;
+}
+
+.ledger-col-credit .ledger-col-header,
+.ledger-col-credit .ledger-col-total {
+  color: #1a8a4a;
+}
+
+.ledger-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.ledger-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ledger-row input {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font: inherit;
+  font-size: 0.8rem;
+  background: var(--bg);
+  color: var(--text-h);
+  min-width: 0;
+}
+
+.ledger-date {
+  flex: 1.3;
+}
+
+.ledger-amount {
+  flex: 1;
+}
+
+.ledger-note {
+  flex: 1.6;
+}
+
+.ledger-add-form {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ledger-add-form input {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font: inherit;
+  font-size: 0.8rem;
+  background: var(--bg);
+  color: var(--text-h);
+  min-width: 0;
+}
+
+.ledger-date,
+.ledger-add-form input[type="date"] {
+  flex: 1.3;
+}
+
+.ledger-add-form input[type="number"] {
+  flex: 1;
+}
+
+.ledger-add-form input[type="text"] {
+  flex: 1.6;
+}
+
+.ledger-add-form button {
+  flex: none;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ledger-add-form button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.ledger-col-total {
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.ledger-balance {
+  text-align: center;
+  font-weight: 700;
+  color: var(--text-h);
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
 }

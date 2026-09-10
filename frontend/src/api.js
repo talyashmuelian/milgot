@@ -13,11 +13,11 @@ export function listAvreichim() {
   return fetch(`${BASE_URL}/avreichim`).then(handle);
 }
 
-export function createAvrech(name, childrenCount) {
+export function createAvrech(name, childrenCount, cardOnly = false) {
   return fetch(`${BASE_URL}/avreichim`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, children_count: childrenCount }),
+    body: JSON.stringify({ name, children_count: childrenCount, card_only: cardOnly }),
   }).then(handle);
 }
 
@@ -83,6 +83,16 @@ export function getMonthReport(year, month) {
 
 export function getAvrechReport(avrechId, year) {
   return fetch(`${BASE_URL}/reports/avrech/${avrechId}/${year}`).then(handle);
+}
+
+export function getAttendanceAverage(avrechId, startYear, startMonth, endYear, endMonth) {
+  const params = new URLSearchParams({
+    start_year: startYear,
+    start_month: startMonth,
+    end_year: endYear,
+    end_month: endMonth,
+  });
+  return fetch(`${BASE_URL}/reports/avrech/${avrechId}/average?${params}`).then(handle);
 }
 
 export function monthReportXlsxUrl(year, month) {
@@ -151,4 +161,24 @@ export function editUpdate(updateId, text) {
 
 export function deleteUpdate(updateId) {
   return fetch(`${BASE_URL}/updates/${updateId}`, { method: "DELETE" }).then(handle);
+}
+
+export function createLedgerEntry(avrechId, entry) {
+  return fetch(`${BASE_URL}/avreichim/${avrechId}/ledger`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(entry),
+  }).then(handle);
+}
+
+export function editLedgerEntry(entryId, entry) {
+  return fetch(`${BASE_URL}/ledger/${entryId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(entry),
+  }).then(handle);
+}
+
+export function deleteLedgerEntry(entryId) {
+  return fetch(`${BASE_URL}/ledger/${entryId}`, { method: "DELETE" }).then(handle);
 }

@@ -1,9 +1,165 @@
 import { useEffect, useState } from "react";
-import { listCards, createUpdate, editUpdate, deleteUpdate } from "../api";
+import {
+  listCards,
+  createAvrech,
+  createUpdate,
+  editUpdate,
+  deleteUpdate,
+  createLedgerEntry,
+  editLedgerEntry,
+  deleteLedgerEntry,
+} from "../api";
 
 function formatDate(iso) {
   if (!iso) return "";
   return new Date(iso).toLocaleString("he-IL", { dateStyle: "short", timeStyle: "short" });
+}
+
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function sumEntries(entries) {
+  return entries.reduce((total, e) => total + e.amount, 0);
+}
+
+function LedgerRow({ entry, onChanged }) {
+  async function saveField(field, value) {
+    if (field === "amount") {
+      const num = parseFloat(value);
+      if (Number.isNaN(num) || num === entry.amount) return;
+      await editLedgerEntry(entry.id, { amount: num });
+    } else if (value === entry[field]) {
+      return;
+    } else {
+      await editLedgerEntry(entry.id, { [field]: value });
+    }
+    await onChanged();
+  }
+
+  async function handleDelete() {
+    if (!window.confirm("למחוק את השורה הזו?")) return;
+    await deleteLedgerEntry(entry.id);
+    await onChanged();
+  }
+
+  return (
+    <li className="ledger-row">
+      <input
+        type="date"
+        className="ledger-date"
+        defaultValue={entry.date}
+        onBlur={(e) => saveField("date", e.target.value)}
+      />
+      <input
+        type="number"
+        step="0.01"
+        className="ledger-amount"
+        defaultValue={entry.amount}
+        onBlur={(e) => saveField("amount", e.target.value)}
+      />
+      <input
+        type="text"
+        className="ledger-note"
+        placeholder="הערה"
+        defaultValue={entry.note || ""}
+        onBlur={(e) => saveField("note", e.target.value)}
+      />
+      <button className="icon-btn" title="מחק" onClick={handleDelete}>
+        🗑
+      </button>
+    </li>
+  );
+}
+
+function LedgerColumn({ kind, label, entries, avrechId, onChanged }) {
+  const [date, setDate] = useState(todayIso());
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [adding, setAdding] = useState(false);
+
+  async function handleAdd(e) {
+    e.preventDefault();
+    const num = parseFloat(amount);
+    if (Number.isNaN(num)) return;
+    setAdding(true);
+    try {
+      await createLedgerEntry(avrechId, { kind, date, amount: num, note: note.trim() });
+      setAmount("");
+      setNote("");
+      setDate(todayIso());
+      await onChanged();
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  return (
+    <div className={`ledger-col ledger-col-${kind}`}>
+      <div className="ledger-col-header">{label}</div>
+
+      <ul className="ledger-list">
+        {entries.length === 0 && <li className="update-empty">אין שורות.</li>}
+        {entries.map((entry) => (
+          <LedgerRow key={entry.id} entry={entry} onChanged={onChanged} />
+        ))}
+      </ul>
+
+      <form className="ledger-add-form" onSubmit={handleAdd}>
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        <input
+          type="number"
+          step="0.01"
+          placeholder="סכום"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="הערה"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+        />
+        <button type="submit" disabled={adding || !amount.trim()}>
+          {adding ? "מוסיף..." : "הוסף שורה"}
+        </button>
+      </form>
+
+      <div className="ledger-col-total">
+        סה"כ {label}: ₪{sumEntries(entries)}
+      </div>
+    </div>
+  );
+}
+
+function AccountLedger({ avrech, onChanged }) {
+  const ledger = avrech.ledger || [];
+  const charges = ledger.filter((e) => e.kind === "charge");
+  const credits = ledger.filter((e) => e.kind === "credit");
+  const balance = sumEntries(charges) - sumEntries(credits);
+
+  return (
+    <div className="ledger">
+      <h4>דף חשבון</h4>
+      <div className="ledger-columns">
+        <LedgerColumn
+          kind="charge"
+          label="חיובים"
+          entries={charges}
+          avrechId={avrech.id}
+          onChanged={onChanged}
+        />
+        <LedgerColumn
+          kind="credit"
+          label="זיכויים"
+          entries={credits}
+          avrechId={avrech.id}
+          onChanged={onChanged}
+        />
+      </div>
+      <div className="ledger-balance">יתרה כוללת: ₪{balance}</div>
+    </div>
+  );
 }
 
 function AvrechCard({ avrech, onChanged }) {
@@ -53,6 +209,7 @@ function AvrechCard({ avrech, onChanged }) {
         {avrech.children_count > 0 && (
           <span className="children-badge">({avrech.children_count})</span>
         )}
+        {avrech.card_only && <span className="card-only-badge">כרטיס בלבד</span>}
       </div>
 
       <form className="update-form" onSubmit={handleAdd}>
@@ -115,7 +272,56 @@ function AvrechCard({ avrech, onChanged }) {
           </li>
         ))}
       </ul>
+
+      <AccountLedger avrech={avrech} onChanged={onChanged} />
     </div>
+  );
+}
+
+function AddCardPersonForm({ onChanged }) {
+  const [name, setName] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  async function handleAdd(e) {
+    e.preventDefault();
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setAdding(true);
+    try {
+      await createAvrech(trimmed, 0, true);
+      setName("");
+      setOpen(false);
+      await onChanged();
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button className="add-card-person-toggle" onClick={() => setOpen(true)}>
+        + כרטיס חדש (למי שאינו ברשימת האברכים)
+      </button>
+    );
+  }
+
+  return (
+    <form className="add-card-person-form" onSubmit={handleAdd}>
+      <input
+        type="text"
+        placeholder="שם"
+        autoFocus
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+      />
+      <button type="submit" disabled={adding || !name.trim()}>
+        {adding ? "יוצר..." : "צור כרטיס"}
+      </button>
+      <button type="button" onClick={() => setOpen(false)}>
+        בטל
+      </button>
+    </form>
   );
 }
 
@@ -136,6 +342,8 @@ export default function CardsPage() {
 
   return (
     <main className="cards-page">
+      <AddCardPersonForm onChanged={refresh} />
+
       {cards.length === 0 ? (
         <p className="archive-empty">אין עדיין אברכים במערכת.</p>
       ) : (

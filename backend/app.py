@@ -15,7 +15,7 @@ from calculations import (
 )
 from excel import build_avrech_report_xlsx, build_month_report_xlsx
 from holidays import month_calendar
-from models import Avrech, AvrechUpdate, DayExclusion, MonthHours, MonthlyRecord, db
+from models import Avrech, AvrechUpdate, DayExclusion, LedgerEntry, MonthHours, MonthlyRecord, db
 from pdf import build_avrech_report_pdf, build_month_report_pdf, build_record_pdf
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -53,6 +53,8 @@ def _ensure_columns():
             conn.execute(text("ALTER TABLE avreichim ADD COLUMN children_count INTEGER NOT NULL DEFAULT 0"))
         if "archived" not in avrech_cols:
             conn.execute(text("ALTER TABLE avreichim ADD COLUMN archived BOOLEAN NOT NULL DEFAULT 0"))
+        if "card_only" not in avrech_cols:
+            conn.execute(text("ALTER TABLE avreichim ADD COLUMN card_only BOOLEAN NOT NULL DEFAULT 0"))
         for col in ("emuna", "tanach", "review_test", "enrichment", "reserve_duty", "regular_service"):
             if col not in record_cols:
                 conn.execute(text(f"ALTER TABLE monthly_records ADD COLUMN {col} BOOLEAN NOT NULL DEFAULT 0"))
@@ -69,6 +71,7 @@ def _ensure_columns():
             "manual_adjustment_note",
             "notes",
             "hidden_sections",
+            "average_excluded_sections",
         ):
             if col not in record_cols:
                 conn.execute(text(f"ALTER TABLE monthly_records ADD COLUMN {col} TEXT"))
@@ -96,7 +99,9 @@ def frontend_asset(filename):
 
 @app.get("/api/avreichim")
 def list_avreichim():
-    avreichim = Avrech.query.filter_by(archived=False).order_by(Avrech.name).all()
+    avreichim = (
+        Avrech.query.filter_by(archived=False, card_only=False).order_by(Avrech.name).all()
+    )
     return jsonify([a.to_dict() for a in avreichim])
 
 
@@ -113,7 +118,8 @@ def create_avrech():
     if not name:
         return jsonify({"error": "name is required"}), 400
     children_count = int(data.get("children_count") or 0)
-    avrech = Avrech(name=name, children_count=children_count)
+    card_only = bool(data.get("card_only") or False)
+    avrech = Avrech(name=name, children_count=children_count, card_only=card_only)
     db.session.add(avrech)
     db.session.commit()
     return jsonify(avrech.to_dict()), 201
@@ -154,6 +160,7 @@ def delete_avrech(avrech_id):
     avrech = Avrech.query.get_or_404(avrech_id)
     MonthlyRecord.query.filter_by(avrech_id=avrech_id).delete()
     AvrechUpdate.query.filter_by(avrech_id=avrech_id).delete()
+    LedgerEntry.query.filter_by(avrech_id=avrech_id).delete()
     db.session.delete(avrech)
     db.session.commit()
     return "", 204
@@ -168,9 +175,17 @@ def list_cards():
     for u in AvrechUpdate.query.order_by(AvrechUpdate.created_at.desc()).all():
         updates_by_avrech.setdefault(u.avrech_id, []).append(u.to_dict())
 
+    ledger_by_avrech = {}
+    for e in LedgerEntry.query.order_by(LedgerEntry.date, LedgerEntry.id).all():
+        ledger_by_avrech.setdefault(e.avrech_id, []).append(e.to_dict())
+
     return jsonify(
         [
-            {**a.to_dict(), "updates": updates_by_avrech.get(a.id, [])}
+            {
+                **a.to_dict(),
+                "updates": updates_by_avrech.get(a.id, []),
+                "ledger": ledger_by_avrech.get(a.id, []),
+            }
             for a in avreichim
         ]
     )
@@ -212,6 +227,77 @@ def delete_avrech_update(update_id):
     return "", 204
 
 
+# ---------- Ledger (account statement / "דף חשבון") ----------
+
+@app.post("/api/avreichim/<int:avrech_id>/ledger")
+def create_ledger_entry(avrech_id):
+    Avrech.query.get_or_404(avrech_id)
+    data = request.get_json(force=True)
+
+    kind = data.get("kind")
+    if kind not in ("charge", "credit"):
+        return jsonify({"error": "kind must be 'charge' or 'credit'"}), 400
+
+    try:
+        amount = float(data.get("amount"))
+    except (TypeError, ValueError):
+        return jsonify({"error": "amount is required"}), 400
+
+    date_str = data.get("date") or datetime.date.today().isoformat()
+    try:
+        date_value = datetime.date.fromisoformat(date_str)
+    except ValueError:
+        return jsonify({"error": "invalid date"}), 400
+
+    entry = LedgerEntry(
+        avrech_id=avrech_id,
+        kind=kind,
+        date=date_value,
+        amount=amount,
+        note=(data.get("note") or "").strip() or None,
+    )
+    db.session.add(entry)
+    db.session.commit()
+    return jsonify(entry.to_dict()), 201
+
+
+@app.put("/api/ledger/<int:entry_id>")
+def update_ledger_entry(entry_id):
+    entry = LedgerEntry.query.get_or_404(entry_id)
+    data = request.get_json(force=True)
+
+    if "kind" in data:
+        if data["kind"] not in ("charge", "credit"):
+            return jsonify({"error": "kind must be 'charge' or 'credit'"}), 400
+        entry.kind = data["kind"]
+
+    if "amount" in data:
+        try:
+            entry.amount = float(data["amount"])
+        except (TypeError, ValueError):
+            return jsonify({"error": "invalid amount"}), 400
+
+    if "date" in data:
+        try:
+            entry.date = datetime.date.fromisoformat(data["date"])
+        except ValueError:
+            return jsonify({"error": "invalid date"}), 400
+
+    if "note" in data:
+        entry.note = (data["note"] or "").strip() or None
+
+    db.session.commit()
+    return jsonify(entry.to_dict())
+
+
+@app.delete("/api/ledger/<int:entry_id>")
+def delete_ledger_entry(entry_id):
+    entry = LedgerEntry.query.get_or_404(entry_id)
+    db.session.delete(entry)
+    db.session.commit()
+    return "", 204
+
+
 # ---------- Monthly records ----------
 
 def _get_or_create_record(avrech_id, year, month):
@@ -247,6 +333,7 @@ def _empty_record(avrech_id, year, month):
         "manual_adjustment_note": None,
         "notes": None,
         "hidden_sections": [],
+        "average_excluded_sections": [],
         "total_amount": None,
     }
 
@@ -331,6 +418,9 @@ def calculate_total(avrech_id, year, month):
     hidden_sections = [s for s in (data.get("hidden_sections") or []) if s in SECTION_KEYS]
     record.hidden_sections = json.dumps(hidden_sections) if hidden_sections else None
 
+    average_excluded = [s for s in (data.get("average_excluded_sections") or []) if s in SECTION_KEYS]
+    record.average_excluded_sections = json.dumps(average_excluded) if average_excluded else None
+
     extras = {field: getattr(record, field) for field in EXTRA_FIELDS}
     record.total_amount = calculate_total_stipend(
         record.attendance_amount,
@@ -349,7 +439,9 @@ def calculate_total(avrech_id, year, month):
 
 def _month_report_rows(year, month):
     """list of (avrech_name, record_dict), one per non-archived avrech, ordered by name."""
-    avreichim = Avrech.query.filter_by(archived=False).order_by(Avrech.name).all()
+    avreichim = (
+        Avrech.query.filter_by(archived=False, card_only=False).order_by(Avrech.name).all()
+    )
     records_by_avrech = {
         r.avrech_id: r
         for r in MonthlyRecord.query.filter_by(year=year, month=month).all()
@@ -421,6 +513,62 @@ def avrech_report_json(avrech_id, year):
     avrech = Avrech.query.get_or_404(avrech_id)
     rows = _avrech_report_rows(avrech_id, year)
     return jsonify({"avrech_name": avrech.name, "months": rows})
+
+
+def _month_range(start_year, start_month, end_year, end_month):
+    if (start_year, start_month) > (end_year, end_month):
+        start_year, start_month, end_year, end_month = end_year, end_month, start_year, start_month
+    y, m = start_year, start_month
+    while (y, m) <= (end_year, end_month):
+        yield (y, m)
+        m += 1
+        if m > 12:
+            m = 1
+            y += 1
+
+
+@app.get("/api/reports/avrech/<int:avrech_id>/average")
+def avrech_attendance_average(avrech_id):
+    avrech = Avrech.query.get_or_404(avrech_id)
+    try:
+        start_year = int(request.args["start_year"])
+        start_month = int(request.args["start_month"])
+        end_year = int(request.args["end_year"])
+        end_month = int(request.args["end_month"])
+    except (KeyError, ValueError):
+        return jsonify({"error": "start_year, start_month, end_year, end_month are required"}), 400
+
+    months = list(_month_range(start_year, start_month, end_year, end_month))
+    months_set = set(months)
+    records_by_ym = {
+        (r.year, r.month): r
+        for r in MonthlyRecord.query.filter_by(avrech_id=avrech_id).all()
+        if (r.year, r.month) in months_set
+    }
+
+    included = []
+    for year, month in months:
+        record = records_by_ym.get((year, month))
+        if record is None or record.study_hours is None:
+            continue
+        excluded = json.loads(record.average_excluded_sections) if record.average_excluded_sections else []
+        if "attendance" in excluded:
+            continue
+        ratio = calculate_attendance_ratio(record.study_hours, record.excluded_hours, _expected_hours(year, month))
+        if ratio is None:
+            continue
+        included.append({"year": year, "month": month, "percentage": round(ratio * 100, 1)})
+
+    average = round(sum(m["percentage"] for m in included) / len(included), 1) if included else None
+    return jsonify(
+        {
+            "avrech_id": avrech_id,
+            "avrech_name": avrech.name,
+            "count": len(included),
+            "average_percentage": average,
+            "months": included,
+        }
+    )
 
 
 @app.get("/api/reports/avrech/<int:avrech_id>/<int:year>/pdf")
@@ -516,18 +664,26 @@ def backup():
     month_hours = MonthHours.query.all()
     exclusions = DayExclusion.query.all()
     updates = AvrechUpdate.query.all()
+    ledger_entries = LedgerEntry.query.all()
 
     data = {
         "version": 1,
         "exported_at": datetime.datetime.utcnow().isoformat() + "Z",
         "avreichim": [
-            {"id": a.id, "name": a.name, "children_count": a.children_count, "archived": a.archived}
+            {
+                "id": a.id,
+                "name": a.name,
+                "children_count": a.children_count,
+                "archived": a.archived,
+                "card_only": a.card_only,
+            }
             for a in avreichim
         ],
         "monthly_records": [r.to_dict() for r in records],
         "month_hours": [{"year": mh.year, "month": mh.month, "hours": mh.hours} for mh in month_hours],
         "day_exclusions": [e.to_dict() for e in exclusions],
         "avrech_updates": [u.to_dict() for u in updates],
+        "ledger_entries": [e.to_dict() for e in ledger_entries],
     }
 
     payload = json.dumps(data, ensure_ascii=False, indent=2)
@@ -548,6 +704,7 @@ def restore():
     try:
         MonthlyRecord.query.delete()
         AvrechUpdate.query.delete()
+        LedgerEntry.query.delete()
         DayExclusion.query.delete()
         MonthHours.query.delete()
         Avrech.query.delete()
@@ -559,6 +716,7 @@ def restore():
                     name=a["name"],
                     children_count=a.get("children_count", 0),
                     archived=bool(a.get("archived", False)),
+                    card_only=bool(a.get("card_only", False)),
                 )
             )
 
@@ -588,6 +746,11 @@ def restore():
                     manual_adjustment_note=r.get("manual_adjustment_note"),
                     notes=r.get("notes"),
                     hidden_sections=json.dumps(r["hidden_sections"]) if r.get("hidden_sections") else None,
+                    average_excluded_sections=(
+                        json.dumps(r["average_excluded_sections"])
+                        if r.get("average_excluded_sections")
+                        else None
+                    ),
                     total_amount=r.get("total_amount"),
                 )
             )
@@ -611,6 +774,18 @@ def restore():
                 )
             )
 
+        for e in data.get("ledger_entries", []):
+            db.session.add(
+                LedgerEntry(
+                    id=e["id"],
+                    avrech_id=e["avrech_id"],
+                    kind=e["kind"],
+                    date=datetime.date.fromisoformat(e["date"]),
+                    amount=e["amount"],
+                    note=e.get("note"),
+                )
+            )
+
         db.session.commit()
     except (KeyError, ValueError, TypeError) as exc:
         db.session.rollback()
@@ -622,6 +797,7 @@ def restore():
             "avreichim": len(data["avreichim"]),
             "monthly_records": len(data["monthly_records"]),
             "avrech_updates": len(data.get("avrech_updates", [])),
+            "ledger_entries": len(data.get("ledger_entries", [])),
         }
     )
 

@@ -14,12 +14,17 @@ class Avrech(db.Model):
     archived = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
 
+    # True for a person added just to have a card (updates / ledger) - not a
+    # real avrech, so they're left out of the payroll list and reports.
+    card_only = db.Column(db.Boolean, nullable=False, default=False)
+
     def to_dict(self):
         return {
             "id": self.id,
             "name": self.name,
             "children_count": self.children_count,
             "archived": self.archived,
+            "card_only": self.card_only,
         }
 
 
@@ -60,6 +65,11 @@ class MonthlyRecord(db.Model):
     # None/empty means everything is shown (the default).
     hidden_sections = db.Column(db.Text, nullable=True)
 
+    # JSON-encoded list of section keys to leave out of average calculations
+    # (currently only "attendance" is actually averaged anywhere). None/empty
+    # means everything is included (the default).
+    average_excluded_sections = db.Column(db.Text, nullable=True)
+
     total_amount = db.Column(db.Float, nullable=True)
 
     def to_dict(self):
@@ -87,6 +97,9 @@ class MonthlyRecord(db.Model):
             "manual_adjustment_note": self.manual_adjustment_note,
             "notes": self.notes,
             "hidden_sections": json.loads(self.hidden_sections) if self.hidden_sections else [],
+            "average_excluded_sections": (
+                json.loads(self.average_excluded_sections) if self.average_excluded_sections else []
+            ),
             "total_amount": self.total_amount,
         }
 
@@ -109,6 +122,30 @@ class AvrechUpdate(db.Model):
             "text": self.text,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class LedgerEntry(db.Model):
+    """A single charge or credit line in an avrech's account ledger ('דף חשבון')."""
+
+    __tablename__ = "ledger_entries"
+
+    id = db.Column(db.Integer, primary_key=True)
+    avrech_id = db.Column(db.Integer, db.ForeignKey("avreichim.id"), nullable=False)
+    kind = db.Column(db.String(10), nullable=False)  # "charge" or "credit"
+    date = db.Column(db.Date, nullable=False)
+    amount = db.Column(db.Float, nullable=False)
+    note = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "avrech_id": self.avrech_id,
+            "kind": self.kind,
+            "date": self.date.isoformat() if self.date else None,
+            "amount": self.amount,
+            "note": self.note,
         }
 
 

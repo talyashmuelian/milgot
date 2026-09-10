@@ -62,6 +62,7 @@ export default function RecordPanel({
   const [manualAdjustmentAmount, setManualAdjustmentAmount] = useState("");
   const [manualAdjustmentNote, setManualAdjustmentNote] = useState("");
   const [hiddenSections, setHiddenSections] = useState([]);
+  const [averageExcludedSections, setAverageExcludedSections] = useState([]);
   const [expectedHours, setExpectedHours] = useState(null);
   const [savingAttendance, setSavingAttendance] = useState(false);
   const [savingTotal, setSavingTotal] = useState(false);
@@ -89,6 +90,7 @@ export default function RecordPanel({
     setManualAdjustmentAmount(record.manual_adjustment_amount ?? "");
     setManualAdjustmentNote(record.manual_adjustment_note ?? "");
     setHiddenSections(record.hidden_sections ?? []);
+    setAverageExcludedSections(record.average_excluded_sections ?? []);
   }, [record]);
 
   useEffect(() => {
@@ -112,6 +114,12 @@ export default function RecordPanel({
 
   function toggleSectionVisibility(key) {
     setHiddenSections((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
+    );
+  }
+
+  function toggleSectionAverageInclusion(key) {
+    setAverageExcludedSections((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]
     );
   }
@@ -143,6 +151,7 @@ export default function RecordPanel({
         manual_adjustment_amount: manualAdjustmentAmount === "" ? null : Number(manualAdjustmentAmount),
         manual_adjustment_note: manualAdjustmentNote === "" ? null : manualAdjustmentNote,
         hidden_sections: hiddenSections,
+        average_excluded_sections: averageExcludedSections,
       });
     } finally {
       setSavingTotal(false);
@@ -309,6 +318,24 @@ export default function RecordPanel({
                   type="checkbox"
                   checked={!hiddenSections.includes(key)}
                   onChange={() => toggleSectionVisibility(key)}
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="visibility-panel">
+          <p className="visibility-panel-title">
+            אילו חלקים לכלול בחישוב ממוצע נוכחות (ברירת מחדל: הכול נכלל)
+          </p>
+          <div className="checkbox-grid">
+            {SECTION_LABELS.map(({ key, label }) => (
+              <label key={key} className="checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={!averageExcludedSections.includes(key)}
+                  onChange={() => toggleSectionAverageInclusion(key)}
                 />
                 {label}
               </label>
