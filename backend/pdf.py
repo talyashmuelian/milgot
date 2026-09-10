@@ -51,9 +51,15 @@ def _ensure_font():
     )
 
 
+# get_display() reorders characters but doesn't mirror bracket-style ones
+# (part of the Unicode bidi spec reportlab has no glyph-mirroring support
+# for) - without this, "(" and ")" end up swapped in RTL text.
+_MIRROR_BRACKETS = str.maketrans("()[]{}<>", ")(][}{><")
+
+
 def he(text):
     """Reorder a pure-Hebrew string into visual order for drawing."""
-    return get_display(text)
+    return get_display(text).translate(_MIRROR_BRACKETS)
 
 
 def _hours(value):
