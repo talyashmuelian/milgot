@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { MONTH_NAMES } from "../months";
 import { recordPdfUrl, getCalendarMonth } from "../api";
+
+const AUTOSAVE_DELAY_MS = 1000;
 
 const CHECKBOX_FIELDS = [
   { key: "enrichment", label: "העשרות", amount: 500 },
@@ -40,15 +42,10 @@ const SECTION_LABELS = [
   { key: "notes", label: "הערות חופשיות" },
 ];
 
-export default function RecordPanel({
-  avrechId,
-  year,
-  month,
-  record,
-  loading,
-  onCalculateAttendance,
-  onCalculateTotal,
-}) {
+const RecordPanel = forwardRef(function RecordPanel(
+  { avrechId, year, month, record, loading, onCalculateAttendance, onCalculateTotal },
+  ref
+) {
   const [studyHours, setStudyHours] = useState("");
   const [excludedHours, setExcludedHours] = useState("");
   const [checkboxes, setCheckboxes] = useState(EMPTY_CHECKBOXES);
@@ -67,11 +64,34 @@ export default function RecordPanel({
   const [savingAttendance, setSavingAttendance] = useState(false);
   const [savingTotal, setSavingTotal] = useState(false);
 
+  // Snapshot of the values last loaded from (or saved to) the server, used to
+  // detect real edits. Comparing against a baseline (rather than a "skip the
+  // first effect run" flag) stays correct under React StrictMode's
+  // double-invoked effects in development.
+  const attendanceBaselineRef = useRef(null);
+  const totalBaselineRef = useRef(null);
+  const attendanceDirtyRef = useRef(false);
+  const totalDirtyRef = useRef(false);
+  const attendanceTimerRef = useRef(null);
+  const totalTimerRef = useRef(null);
+
   useEffect(() => {
     if (!record) return;
-    setStudyHours(record.study_hours ?? "");
-    setExcludedHours(record.excluded_hours ?? "");
-    setCheckboxes({
+    attendanceDirtyRef.current = false;
+    totalDirtyRef.current = false;
+    clearTimeout(attendanceTimerRef.current);
+    clearTimeout(totalTimerRef.current);
+
+    const loadedStudyHours = record.study_hours ?? "";
+    const loadedExcludedHours = record.excluded_hours ?? "";
+    setStudyHours(loadedStudyHours);
+    setExcludedHours(loadedExcludedHours);
+    attendanceBaselineRef.current = {
+      studyHours: loadedStudyHours,
+      excludedHours: loadedExcludedHours,
+    };
+
+    const loadedCheckboxes = {
       enrichment: record.enrichment ?? false,
       emuna: record.emuna ?? false,
       tanach: record.tanach ?? false,
@@ -79,18 +99,46 @@ export default function RecordPanel({
       ktiva: record.ktiva ?? false,
       gemara_bekiut: record.gemara_bekiut ?? false,
       with_american: record.with_american ?? false,
-    });
-    setReserveDuty(record.reserve_duty ?? false);
-    setRegularService(record.regular_service ?? false);
-    setSpecialArrangementAmount(record.special_arrangement_amount ?? "");
-    setSpecialArrangementNote(record.special_arrangement_note ?? "");
-    setBonusAmount(record.bonus_amount ?? "");
-    setBonusNote(record.bonus_note ?? "");
-    setNotes(record.notes ?? "");
-    setManualAdjustmentAmount(record.manual_adjustment_amount ?? "");
-    setManualAdjustmentNote(record.manual_adjustment_note ?? "");
-    setHiddenSections(record.hidden_sections ?? []);
-    setAverageExcludedSections(record.average_excluded_sections ?? []);
+    };
+    const loadedReserveDuty = record.reserve_duty ?? false;
+    const loadedRegularService = record.regular_service ?? false;
+    const loadedSpecialArrangementAmount = record.special_arrangement_amount ?? "";
+    const loadedSpecialArrangementNote = record.special_arrangement_note ?? "";
+    const loadedBonusAmount = record.bonus_amount ?? "";
+    const loadedBonusNote = record.bonus_note ?? "";
+    const loadedNotes = record.notes ?? "";
+    const loadedManualAdjustmentAmount = record.manual_adjustment_amount ?? "";
+    const loadedManualAdjustmentNote = record.manual_adjustment_note ?? "";
+    const loadedHiddenSections = record.hidden_sections ?? [];
+    const loadedAverageExcludedSections = record.average_excluded_sections ?? [];
+
+    setCheckboxes(loadedCheckboxes);
+    setReserveDuty(loadedReserveDuty);
+    setRegularService(loadedRegularService);
+    setSpecialArrangementAmount(loadedSpecialArrangementAmount);
+    setSpecialArrangementNote(loadedSpecialArrangementNote);
+    setBonusAmount(loadedBonusAmount);
+    setBonusNote(loadedBonusNote);
+    setNotes(loadedNotes);
+    setManualAdjustmentAmount(loadedManualAdjustmentAmount);
+    setManualAdjustmentNote(loadedManualAdjustmentNote);
+    setHiddenSections(loadedHiddenSections);
+    setAverageExcludedSections(loadedAverageExcludedSections);
+
+    totalBaselineRef.current = {
+      checkboxes: loadedCheckboxes,
+      reserveDuty: loadedReserveDuty,
+      regularService: loadedRegularService,
+      specialArrangementAmount: loadedSpecialArrangementAmount,
+      specialArrangementNote: loadedSpecialArrangementNote,
+      bonusAmount: loadedBonusAmount,
+      bonusNote: loadedBonusNote,
+      notes: loadedNotes,
+      manualAdjustmentAmount: loadedManualAdjustmentAmount,
+      manualAdjustmentNote: loadedManualAdjustmentNote,
+      hiddenSections: loadedHiddenSections,
+      averageExcludedSections: loadedAverageExcludedSections,
+    };
   }, [record]);
 
   useEffect(() => {
@@ -99,6 +147,84 @@ export default function RecordPanel({
       setExpectedHours(data.saved_hours ?? data.suggested_hours)
     );
   }, [year, month]);
+
+  useEffect(() => {
+    const baseline = attendanceBaselineRef.current;
+    if (!baseline) return;
+    const changed = studyHours !== baseline.studyHours || excludedHours !== baseline.excludedHours;
+    if (!changed) {
+      attendanceDirtyRef.current = false;
+      return;
+    }
+    attendanceDirtyRef.current = true;
+    const timer = setTimeout(() => {
+      attendanceDirtyRef.current = false;
+      handleCalculateAttendance();
+    }, AUTOSAVE_DELAY_MS);
+    attendanceTimerRef.current = timer;
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studyHours, excludedHours]);
+
+  useEffect(() => {
+    const baseline = totalBaselineRef.current;
+    if (!baseline) return;
+    const changed =
+      checkboxes !== baseline.checkboxes ||
+      reserveDuty !== baseline.reserveDuty ||
+      regularService !== baseline.regularService ||
+      specialArrangementAmount !== baseline.specialArrangementAmount ||
+      specialArrangementNote !== baseline.specialArrangementNote ||
+      bonusAmount !== baseline.bonusAmount ||
+      bonusNote !== baseline.bonusNote ||
+      notes !== baseline.notes ||
+      manualAdjustmentAmount !== baseline.manualAdjustmentAmount ||
+      manualAdjustmentNote !== baseline.manualAdjustmentNote ||
+      hiddenSections !== baseline.hiddenSections ||
+      averageExcludedSections !== baseline.averageExcludedSections;
+    if (!changed) {
+      totalDirtyRef.current = false;
+      return;
+    }
+    totalDirtyRef.current = true;
+    const timer = setTimeout(() => {
+      totalDirtyRef.current = false;
+      handleCalculateTotal();
+    }, AUTOSAVE_DELAY_MS);
+    totalTimerRef.current = timer;
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    checkboxes,
+    reserveDuty,
+    regularService,
+    specialArrangementAmount,
+    specialArrangementNote,
+    bonusAmount,
+    bonusNote,
+    notes,
+    manualAdjustmentAmount,
+    manualAdjustmentNote,
+    hiddenSections,
+    averageExcludedSections,
+  ]);
+
+  useImperativeHandle(ref, () => ({
+    async flush() {
+      clearTimeout(attendanceTimerRef.current);
+      clearTimeout(totalTimerRef.current);
+      const tasks = [];
+      if (attendanceDirtyRef.current) {
+        attendanceDirtyRef.current = false;
+        tasks.push(handleCalculateAttendance());
+      }
+      if (totalDirtyRef.current) {
+        totalDirtyRef.current = false;
+        tasks.push(handleCalculateTotal());
+      }
+      await Promise.all(tasks);
+    },
+  }));
 
   if (loading) {
     return <main className="record-panel">טוען...</main>;
@@ -354,4 +480,6 @@ export default function RecordPanel({
       </section>
     </main>
   );
-}
+});
+
+export default RecordPanel;

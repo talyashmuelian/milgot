@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import StudentsSidebar from "./components/StudentsSidebar";
 import MonthsSidebar from "./components/MonthsSidebar";
 import RecordPanel from "./components/RecordPanel";
@@ -28,6 +28,7 @@ export default function App() {
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [record, setRecord] = useState(null);
   const [loadingRecord, setLoadingRecord] = useState(false);
+  const recordPanelRef = useRef(null);
 
   useEffect(() => {
     refreshAvreichim();
@@ -68,9 +69,25 @@ export default function App() {
     await refreshAvreichim();
   }
 
-  function handleSelectAvrech(id) {
+  async function handleSelectAvrech(id) {
+    await recordPanelRef.current?.flush();
     setSelectedAvrechId(id);
     setSelectedMonth(null);
+  }
+
+  async function handleSelectMonth(month) {
+    await recordPanelRef.current?.flush();
+    setSelectedMonth(month);
+  }
+
+  async function handleYearChange(newYear) {
+    await recordPanelRef.current?.flush();
+    setYear(newYear);
+  }
+
+  async function handleTabChange(tab) {
+    await recordPanelRef.current?.flush();
+    setActiveTab(tab);
   }
 
   async function handleCalculateAttendance(studyHours, excludedHours) {
@@ -98,37 +115,37 @@ export default function App() {
         <nav className="tab-nav">
           <button
             className={activeTab === "students" ? "active" : ""}
-            onClick={() => setActiveTab("students")}
+            onClick={() => handleTabChange("students")}
           >
             אברכים
           </button>
           <button
             className={activeTab === "cards" ? "active" : ""}
-            onClick={() => setActiveTab("cards")}
+            onClick={() => handleTabChange("cards")}
           >
             כרטיסים
           </button>
           <button
             className={activeTab === "calendar" ? "active" : ""}
-            onClick={() => setActiveTab("calendar")}
+            onClick={() => handleTabChange("calendar")}
           >
             לוח שנה
           </button>
           <button
             className={activeTab === "summary" ? "active" : ""}
-            onClick={() => setActiveTab("summary")}
+            onClick={() => handleTabChange("summary")}
           >
             סיכום כללי
           </button>
           <button
             className={activeTab === "backup" ? "active" : ""}
-            onClick={() => setActiveTab("backup")}
+            onClick={() => handleTabChange("backup")}
           >
             גיבוי ושחזור
           </button>
           <button
             className={activeTab === "archive" ? "active" : ""}
-            onClick={() => setActiveTab("archive")}
+            onClick={() => handleTabChange("archive")}
           >
             ארכיון
           </button>
@@ -151,13 +168,14 @@ export default function App() {
               avrechId={selectedAvrech.id}
               avrechName={selectedAvrech.name}
               year={year}
-              onYearChange={setYear}
+              onYearChange={handleYearChange}
               selectedMonth={selectedMonth}
-              onSelectMonth={setSelectedMonth}
+              onSelectMonth={handleSelectMonth}
             />
           )}
 
           <RecordPanel
+            ref={recordPanelRef}
             avrechId={selectedAvrechId}
             year={year}
             month={selectedMonth}
