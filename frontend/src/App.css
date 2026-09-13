@@ -927,6 +927,11 @@ textarea:focus {
   font-weight: 600;
 }
 
+.bool-excluded {
+  color: var(--text);
+  opacity: 0.45;
+}
+
 .bool-no {
   color: var(--text);
   opacity: 0.6;

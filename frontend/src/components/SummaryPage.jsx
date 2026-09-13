@@ -40,11 +40,11 @@ function ReportTable({ rowLabel, rows, averageAttendancePercentage }) {
         </tr>
       </thead>
       <tbody>
-        {rows.map(({ label, record }, i) => (
+        {rows.map(({ label, record, paidRecord }, i) => (
           <tr key={i}>
             <td className="row-label-cell">{label}</td>
             {COLUMNS.map((col) => (
-              <Cell key={col.key} column={col} record={record} />
+              <Cell key={col.key} column={col} record={record} paidRecord={paidRecord} />
             ))}
           </tr>
         ))}
@@ -65,9 +65,15 @@ function ReportTable({ rowLabel, rows, averageAttendancePercentage }) {
   );
 }
 
-function Cell({ column, record }) {
+function Cell({ column, record, paidRecord }) {
   const value = record[column.key];
   if (column.type === "bool") {
+    const paidButExcludedFromAverage =
+      paidRecord?.[column.key] === true &&
+      (paidRecord.average_excluded_sections || []).includes(column.key);
+    if (paidButExcludedFromAverage) {
+      return <td className="bool-excluded">-</td>;
+    }
     return (
       <td className={value ? "bool-yes" : "bool-no"}>{value ? "כן" : "לא"}</td>
     );
@@ -167,6 +173,7 @@ export default function SummaryPage() {
   const actualRows = rows.map(({ label, record }) => ({
     label,
     record: record.actual || record,
+    paidRecord: record,
   }));
 
   function averagePercentage(rowsList) {
