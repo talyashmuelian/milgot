@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import StudentsSidebar from "./components/StudentsSidebar";
 import MonthsSidebar from "./components/MonthsSidebar";
 import RecordPanel from "./components/RecordPanel";
+import AvrechCard from "./components/AvrechCard";
 import CalendarPage from "./components/CalendarPage";
 import SummaryPage from "./components/SummaryPage";
 import BackupPage from "./components/BackupPage";
@@ -30,6 +31,7 @@ export default function App() {
   const [record, setRecord] = useState(null);
   const [loadingRecord, setLoadingRecord] = useState(false);
   const [avrechCard, setAvrechCard] = useState(null);
+  const [mainView, setMainView] = useState("record"); // "record" | "card"
   const recordPanelRef = useRef(null);
 
   useEffect(() => {
@@ -89,11 +91,18 @@ export default function App() {
     await recordPanelRef.current?.flush();
     setSelectedAvrechId(id);
     setSelectedMonth(null);
+    setMainView("record");
   }
 
   async function handleSelectMonth(month) {
     await recordPanelRef.current?.flush();
     setSelectedMonth(month);
+    setMainView("record");
+  }
+
+  async function handleSelectCard() {
+    await recordPanelRef.current?.flush();
+    setMainView("card");
   }
 
   async function handleYearChange(newYear) {
@@ -188,22 +197,26 @@ export default function App() {
               onYearChange={handleYearChange}
               selectedMonth={selectedMonth}
               onSelectMonth={handleSelectMonth}
-              avrechCard={avrechCard}
-              onCardChanged={refreshAvrechCard}
+              cardSelected={mainView === "card"}
+              onSelectCard={handleSelectCard}
             />
           )}
 
-          <RecordPanel
-            ref={recordPanelRef}
-            avrechId={selectedAvrechId}
-            year={year}
-            month={selectedMonth}
-            record={record}
-            loading={loadingRecord}
-            reminders={reminders}
-            onCalculateAttendance={handleCalculateAttendance}
-            onCalculateTotal={handleCalculateTotal}
-          />
+          {mainView === "card" && avrechCard ? (
+            <AvrechCard avrech={avrechCard} onChanged={refreshAvrechCard} defaultOpen />
+          ) : (
+            <RecordPanel
+              ref={recordPanelRef}
+              avrechId={selectedAvrechId}
+              year={year}
+              month={selectedMonth}
+              record={record}
+              loading={loadingRecord}
+              reminders={reminders}
+              onCalculateAttendance={handleCalculateAttendance}
+              onCalculateTotal={handleCalculateTotal}
+            />
+          )}
         </div>
       ) : activeTab === "cards" ? (
         <CardsPage />

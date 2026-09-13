@@ -1,6 +1,5 @@
 import { MONTH_NAMES } from "../months";
 import { avrechReportPdfUrl, monthReportPdfUrl } from "../api";
-import AvrechCard from "./AvrechCard";
 
 export default function MonthsSidebar({
   avrechId,
@@ -9,8 +8,8 @@ export default function MonthsSidebar({
   onYearChange,
   selectedMonth,
   onSelectMonth,
-  avrechCard,
-  onCardChanged,
+  cardSelected,
+  onSelectCard,
 }) {
   return (
     <aside className="sidebar months-sidebar">
@@ -33,7 +32,10 @@ export default function MonthsSidebar({
         {MONTH_NAMES.map((name, index) => {
           const monthNum = index + 1;
           return (
-            <li key={monthNum} className={monthNum === selectedMonth ? "selected" : ""}>
+            <li
+              key={monthNum}
+              className={!cardSelected && monthNum === selectedMonth ? "selected" : ""}
+            >
               <button onClick={() => onSelectMonth(monthNum)}>{name}</button>
               <button
                 className="pdf-link icon-btn"
@@ -45,13 +47,10 @@ export default function MonthsSidebar({
             </li>
           );
         })}
+        <li className={`card-link-item ${cardSelected ? "selected" : ""}`}>
+          <button onClick={onSelectCard}>כרטיס</button>
+        </li>
       </ul>
-
-      {avrechCard && (
-        <div className="months-sidebar-card">
-          <AvrechCard avrech={avrechCard} onChanged={onCardChanged} />
-        </div>
-      )}
     </aside>
   );
 }

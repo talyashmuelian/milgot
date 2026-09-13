@@ -93,20 +93,6 @@
   color: var(--text-h);
 }
 
-.months-sidebar {
-  flex-basis: 300px;
-}
-
-.months-sidebar-card {
-  margin-top: 18px;
-  border-top: 1px solid var(--border);
-  padding-top: 14px;
-}
-
-.months-sidebar-card .ledger-columns {
-  flex-direction: column;
-}
-
 .add-form {
   display: flex;
   gap: 6px;
@@ -169,6 +155,16 @@
 .student-name:hover,
 .months-list li > button:first-child:hover {
   background: var(--accent-bg);
+}
+
+.card-link-item {
+  margin-top: 6px;
+  padding-top: 9px;
+  border-top: 1px solid var(--border);
+}
+
+.card-link-item > button {
+  font-weight: 600;
 }
 
 .pdf-link {
@@ -1126,6 +1122,11 @@ textarea:focus {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+}
+
+.app-layout > .avrech-card {
+  flex: 1;
+  min-width: 0;
 }
 
 .avrech-card-header {
