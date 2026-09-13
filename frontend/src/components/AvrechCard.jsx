@@ -206,6 +206,11 @@ export default function AvrechCard({ avrech, onChanged, defaultOpen = false }) {
     await onChanged();
   }
 
+  async function toggleMonthlyReminder(update) {
+    await editUpdate(update.id, update.text, !update.monthly_reminder);
+    await onChanged();
+  }
+
   return (
     <div className={`avrech-card ${open ? "open" : "collapsed"}`}>
       <div className="avrech-card-header">
@@ -295,6 +300,14 @@ export default function AvrechCard({ avrech, onChanged, defaultOpen = false }) {
                       )}
                       {update.text}
                     </p>
+                    <label className="monthly-reminder-checkbox update-reminder-toggle">
+                      <input
+                        type="checkbox"
+                        checked={update.monthly_reminder || false}
+                        onChange={() => toggleMonthlyReminder(update)}
+                      />
+                      תזכורת חודשית
+                    </label>
                     <div className="update-meta">
                       <span>
                         {formatDate(update.created_at)}

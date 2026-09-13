@@ -1238,6 +1238,10 @@ textarea:focus {
   word-break: break-word;
 }
 
+.update-reminder-toggle {
+  margin-bottom: 8px;
+}
+
 .update-meta {
   display: flex;
   align-items: center;
