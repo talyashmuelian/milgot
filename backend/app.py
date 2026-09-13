@@ -12,6 +12,7 @@ from calculations import (
     calculate_attendance_ratio,
     calculate_attendance_stipend,
     calculate_total_stipend,
+    compute_actual_record,
 )
 from excel import build_avrech_report_xlsx, build_month_report_xlsx
 from holidays import month_calendar
@@ -464,6 +465,13 @@ def _with_attendance_percentage_if_recorded(record_dict, year, month):
     return _with_attendance_percentage(record_dict, year, month)
 
 
+def _with_actual(record_dict):
+    """Attach an "actual" key: what really happened once sections marked as
+    not reflecting reality (average_excluded_sections) are zeroed out."""
+    record_dict["actual"] = compute_actual_record(record_dict)
+    return record_dict
+
+
 def _month_report_rows(year, month):
     """list of (avrech_name, record_dict), one per non-archived avrech, ordered by name."""
     avreichim = (
@@ -476,12 +484,14 @@ def _month_report_rows(year, month):
     return [
         (
             a.name,
-            _with_attendance_percentage_if_recorded(
-                records_by_avrech[a.id].to_dict()
-                if a.id in records_by_avrech
-                else _empty_record(a.id, year, month),
-                year,
-                month,
+            _with_actual(
+                _with_attendance_percentage_if_recorded(
+                    records_by_avrech[a.id].to_dict()
+                    if a.id in records_by_avrech
+                    else _empty_record(a.id, year, month),
+                    year,
+                    month,
+                )
             ),
         )
         for a in avreichim
@@ -495,10 +505,12 @@ def _avrech_report_rows(avrech_id, year):
         for r in MonthlyRecord.query.filter_by(avrech_id=avrech_id, year=year).all()
     }
     return [
-        _with_attendance_percentage_if_recorded(
-            records_by_month[m].to_dict() if m in records_by_month else _empty_record(avrech_id, year, m),
-            year,
-            m,
+        _with_actual(
+            _with_attendance_percentage_if_recorded(
+                records_by_month[m].to_dict() if m in records_by_month else _empty_record(avrech_id, year, m),
+                year,
+                m,
+            )
         )
         for m in range(1, 13)
     ]

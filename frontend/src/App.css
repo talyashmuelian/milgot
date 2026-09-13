@@ -787,6 +787,16 @@ textarea:focus {
   color: var(--text);
 }
 
+.summary-table-title {
+  margin: 0 0 8px;
+  color: var(--text-h);
+  font-size: 1rem;
+}
+
+.summary-table-title:not(:first-child) {
+  margin-top: 28px;
+}
+
 .summary-table {
   width: 100%;
   border-collapse: collapse;

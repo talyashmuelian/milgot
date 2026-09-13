@@ -27,6 +27,43 @@ const COLUMNS = [
 
 const now = new Date();
 
+function ReportTable({ rowLabel, rows, averageAttendancePercentage }) {
+  return (
+    <table className="summary-table">
+      <thead>
+        <tr>
+          <th>{rowLabel}</th>
+          {COLUMNS.map((col) => (
+            <th key={col.key}>{col.label}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map(({ label, record }, i) => (
+          <tr key={i}>
+            <td className="row-label-cell">{label}</td>
+            {COLUMNS.map((col) => (
+              <Cell key={col.key} column={col} record={record} />
+            ))}
+          </tr>
+        ))}
+      </tbody>
+      <tfoot>
+        <tr className="summary-average-row">
+          <td className="row-label-cell">ממוצע</td>
+          {COLUMNS.map((col) => (
+            <Cell
+              key={col.key}
+              column={col}
+              record={{ attendance_percentage: averageAttendancePercentage }}
+            />
+          ))}
+        </tr>
+      </tfoot>
+    </table>
+  );
+}
+
 function Cell({ column, record }) {
   const value = record[column.key];
   if (column.type === "bool") {
@@ -116,13 +153,22 @@ export default function SummaryPage() {
       ? (monthRows || []).map((r) => ({ label: r.name, record: r }))
       : (avrechData?.months || []).map((r) => ({ label: MONTH_NAMES[r.month - 1], record: r }));
 
-  const attendancePercentages = rows
-    .map((r) => r.record.attendance_percentage)
-    .filter((v) => v != null);
-  const averageAttendancePercentage =
-    attendancePercentages.length > 0
-      ? Math.round((attendancePercentages.reduce((a, b) => a + b, 0) / attendancePercentages.length) * 10) / 10
+  const actualRows = rows.map(({ label, record }) => ({
+    label,
+    record: record.actual || record,
+  }));
+
+  function averagePercentage(rowsList) {
+    const percentages = rowsList
+      .map((r) => r.record.attendance_percentage)
+      .filter((v) => v != null);
+    return percentages.length > 0
+      ? Math.round((percentages.reduce((a, b) => a + b, 0) / percentages.length) * 10) / 10
       : null;
+  }
+
+  const averageAttendancePercentage = averagePercentage(rows);
+  const averageActualAttendancePercentage = averagePercentage(actualRows);
 
   return (
     <main className="summary-page">
@@ -286,38 +332,20 @@ export default function SummaryPage() {
             {mode === "month" ? "אין עדיין אברכים במערכת" : "אין נתונים להצגה"}
           </p>
         ) : (
-          <table className="summary-table">
-            <thead>
-              <tr>
-                <th>{mode === "month" ? "שם אברך" : "חודש"}</th>
-                {COLUMNS.map((col) => (
-                  <th key={col.key}>{col.label}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(({ label, record }, i) => (
-                <tr key={i}>
-                  <td className="row-label-cell">{label}</td>
-                  {COLUMNS.map((col) => (
-                    <Cell key={col.key} column={col} record={record} />
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="summary-average-row">
-                <td className="row-label-cell">ממוצע</td>
-                {COLUMNS.map((col) => (
-                  <Cell
-                    key={col.key}
-                    column={col}
-                    record={{ attendance_percentage: averageAttendancePercentage }}
-                  />
-                ))}
-              </tr>
-            </tfoot>
-          </table>
+          <>
+            <h3 className="summary-table-title">מה שולם</h3>
+            <ReportTable
+              rowLabel={mode === "month" ? "שם אברך" : "חודש"}
+              rows={rows}
+              averageAttendancePercentage={averageAttendancePercentage}
+            />
+            <h3 className="summary-table-title">מה באמת קרה</h3>
+            <ReportTable
+              rowLabel={mode === "month" ? "שם אברך" : "חודש"}
+              rows={actualRows}
+              averageAttendancePercentage={averageActualAttendancePercentage}
+            />
+          </>
         )}
       </div>
       )}

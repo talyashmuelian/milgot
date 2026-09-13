@@ -118,3 +118,50 @@ def calculate_total_stipend(
         + (bonus_amount or 0.0)
         + (manual_adjustment_amount or 0.0)
     )
+
+
+def compute_actual_record(record_dict):
+    """"What actually happened" version of a record, for the summary tables.
+
+    A section listed in average_excluded_sections was paid for (it counts
+    toward total_amount as recorded) but is flagged as not reflecting
+    reality (e.g. paid despite the avrech not really doing it) - so here we
+    zero it out and recompute total_amount as if it never happened.
+    """
+    excluded = set(record_dict.get("average_excluded_sections") or [])
+    actual = dict(record_dict)
+    if not excluded:
+        return actual
+
+    if "attendance" in excluded:
+        actual["study_hours"] = None
+        actual["excluded_hours"] = None
+        actual["attendance_percentage"] = None
+        actual["attendance_amount"] = 0.0
+
+    for key in EXTRA_FIELDS:
+        if key in excluded:
+            actual[key] = False
+
+    if "reserve_duty" in excluded:
+        actual["reserve_duty"] = False
+    if "regular_service" in excluded:
+        actual["regular_service"] = False
+    if "special_arrangement" in excluded:
+        actual["special_arrangement_amount"] = None
+    if "bonus" in excluded:
+        actual["bonus_amount"] = None
+    if "manual_adjustment" in excluded:
+        actual["manual_adjustment_amount"] = None
+
+    extras = {key: actual.get(key, False) for key in EXTRA_FIELDS}
+    actual["total_amount"] = calculate_total_stipend(
+        actual.get("attendance_amount"),
+        extras,
+        actual.get("reserve_duty"),
+        actual.get("regular_service"),
+        actual.get("special_arrangement_amount"),
+        actual.get("bonus_amount"),
+        actual.get("manual_adjustment_amount"),
+    )
+    return actual
