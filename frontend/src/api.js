@@ -85,6 +85,10 @@ export function getAvrechReport(avrechId, year) {
   return fetch(`${BASE_URL}/reports/avrech/${avrechId}/${year}`).then(handle);
 }
 
+export function getPrivateNotes() {
+  return fetch(`${BASE_URL}/reports/private-notes`).then(handle);
+}
+
 export function getAttendanceAverage(avrechId, startYear, startMonth, endYear, endMonth) {
   const params = new URLSearchParams({
     start_year: startYear,

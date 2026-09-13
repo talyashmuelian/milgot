@@ -61,6 +61,11 @@ class MonthlyRecord(db.Model):
     manual_adjustment_note = db.Column(db.Text, nullable=True)
     notes = db.Column(db.Text, nullable=True)
 
+    # A private note that never appears on the PDF ("תלוש") or anywhere the
+    # avrech might see it - visible to the admin only, in the record panel
+    # and the general summary's notes list.
+    private_note = db.Column(db.Text, nullable=True)
+
     # JSON-encoded list of section keys to hide from this record's PDF ("תלוש").
     # None/empty means everything is shown (the default).
     hidden_sections = db.Column(db.Text, nullable=True)
@@ -96,6 +101,7 @@ class MonthlyRecord(db.Model):
             "manual_adjustment_amount": self.manual_adjustment_amount,
             "manual_adjustment_note": self.manual_adjustment_note,
             "notes": self.notes,
+            "private_note": self.private_note,
             "hidden_sections": json.loads(self.hidden_sections) if self.hidden_sections else [],
             "average_excluded_sections": (
                 json.loads(self.average_excluded_sections) if self.average_excluded_sections else []

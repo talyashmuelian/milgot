@@ -5,6 +5,7 @@ import {
   getMonthReport,
   getAvrechReport,
   getAttendanceAverage,
+  getPrivateNotes,
   monthReportXlsxUrl,
   avrechReportXlsxUrl,
 } from "../api";
@@ -97,6 +98,16 @@ export default function SummaryPage() {
   const [averageEndMonth, setAverageEndMonth] = useState(now.getMonth() + 1);
   const [averageResult, setAverageResult] = useState(null);
   const [averageLoading, setAverageLoading] = useState(false);
+
+  const [privateNotes, setPrivateNotes] = useState([]);
+  const [privateNotesLoading, setPrivateNotesLoading] = useState(false);
+
+  useEffect(() => {
+    setPrivateNotesLoading(true);
+    getPrivateNotes()
+      .then(setPrivateNotes)
+      .finally(() => setPrivateNotesLoading(false));
+  }, []);
 
   useEffect(() => {
     listAvreichim().then((list) => {
@@ -324,6 +335,7 @@ export default function SummaryPage() {
           )}
         </div>
       ) : (
+      <>
       <div className="summary-table-wrap">
         {loading ? (
           <p>טוען...</p>
@@ -348,6 +360,28 @@ export default function SummaryPage() {
           </>
         )}
       </div>
+
+      <div className="summary-table-wrap private-notes-panel">
+        <h3 className="summary-table-title">הערות לעצמי</h3>
+        {privateNotesLoading ? (
+          <p>טוען...</p>
+        ) : privateNotes.length === 0 ? (
+          <p className="summary-empty">אין הערות</p>
+        ) : (
+          <ul className="private-notes-list">
+            {privateNotes.map((n, i) => (
+              <li key={i}>
+                <strong>{n.avrech_name}</strong>
+                <span className="private-note-month">
+                  {MONTH_NAMES[n.month - 1]} {n.year}
+                </span>
+                <span className="private-note-text">{n.note}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      </>
       )}
     </main>
   );

@@ -71,6 +71,7 @@ def _ensure_columns():
             "bonus_note",
             "manual_adjustment_note",
             "notes",
+            "private_note",
             "hidden_sections",
             "average_excluded_sections",
         ):
@@ -349,6 +350,7 @@ def _empty_record(avrech_id, year, month):
         "manual_adjustment_amount": None,
         "manual_adjustment_note": None,
         "notes": None,
+        "private_note": None,
         "hidden_sections": [],
         "average_excluded_sections": [],
         "total_amount": None,
@@ -431,6 +433,7 @@ def calculate_total(avrech_id, year, month):
     record.manual_adjustment_amount = data.get("manual_adjustment_amount")
     record.manual_adjustment_note = data.get("manual_adjustment_note")
     record.notes = data.get("notes")
+    record.private_note = data.get("private_note")
 
     hidden_sections = [s for s in (data.get("hidden_sections") or []) if s in SECTION_KEYS]
     record.hidden_sections = json.dumps(hidden_sections) if hidden_sections else None
@@ -553,6 +556,31 @@ def month_report_xlsx(year, month):
         as_attachment=True,
         download_name=filename,
     )
+
+
+@app.get("/api/reports/private-notes")
+def private_notes_json():
+    """Every non-empty private note across all avreichim/months, for the
+    general summary's notes list - independent of the currently selected
+    month/avrech/year."""
+    records = (
+        MonthlyRecord.query.filter(
+            MonthlyRecord.private_note.isnot(None), MonthlyRecord.private_note != ""
+        ).all()
+    )
+    avrech_names = {a.id: a.name for a in Avrech.query.all()}
+    notes = [
+        {
+            "avrech_id": r.avrech_id,
+            "avrech_name": avrech_names.get(r.avrech_id, ""),
+            "year": r.year,
+            "month": r.month,
+            "note": r.private_note,
+        }
+        for r in records
+    ]
+    notes.sort(key=lambda n: (n["avrech_name"], n["year"], n["month"]))
+    return jsonify(notes)
 
 
 @app.get("/api/reports/avrech/<int:avrech_id>/<int:year>")
@@ -792,6 +820,7 @@ def restore():
                     manual_adjustment_amount=r.get("manual_adjustment_amount"),
                     manual_adjustment_note=r.get("manual_adjustment_note"),
                     notes=r.get("notes"),
+                    private_note=r.get("private_note"),
                     hidden_sections=json.dumps(r["hidden_sections"]) if r.get("hidden_sections") else None,
                     average_excluded_sections=(
                         json.dumps(r["average_excluded_sections"])

@@ -56,6 +56,7 @@ const RecordPanel = forwardRef(function RecordPanel(
   const [bonusAmount, setBonusAmount] = useState("");
   const [bonusNote, setBonusNote] = useState("");
   const [notes, setNotes] = useState("");
+  const [privateNote, setPrivateNote] = useState("");
   const [manualAdjustmentAmount, setManualAdjustmentAmount] = useState("");
   const [manualAdjustmentNote, setManualAdjustmentNote] = useState("");
   const [hiddenSections, setHiddenSections] = useState([]);
@@ -107,6 +108,7 @@ const RecordPanel = forwardRef(function RecordPanel(
     const loadedBonusAmount = record.bonus_amount ?? "";
     const loadedBonusNote = record.bonus_note ?? "";
     const loadedNotes = record.notes ?? "";
+    const loadedPrivateNote = record.private_note ?? "";
     const loadedManualAdjustmentAmount = record.manual_adjustment_amount ?? "";
     const loadedManualAdjustmentNote = record.manual_adjustment_note ?? "";
     const loadedHiddenSections = record.hidden_sections ?? [];
@@ -120,6 +122,7 @@ const RecordPanel = forwardRef(function RecordPanel(
     setBonusAmount(loadedBonusAmount);
     setBonusNote(loadedBonusNote);
     setNotes(loadedNotes);
+    setPrivateNote(loadedPrivateNote);
     setManualAdjustmentAmount(loadedManualAdjustmentAmount);
     setManualAdjustmentNote(loadedManualAdjustmentNote);
     setHiddenSections(loadedHiddenSections);
@@ -134,6 +137,7 @@ const RecordPanel = forwardRef(function RecordPanel(
       bonusAmount: loadedBonusAmount,
       bonusNote: loadedBonusNote,
       notes: loadedNotes,
+      privateNote: loadedPrivateNote,
       manualAdjustmentAmount: loadedManualAdjustmentAmount,
       manualAdjustmentNote: loadedManualAdjustmentNote,
       hiddenSections: loadedHiddenSections,
@@ -178,6 +182,7 @@ const RecordPanel = forwardRef(function RecordPanel(
       bonusAmount !== baseline.bonusAmount ||
       bonusNote !== baseline.bonusNote ||
       notes !== baseline.notes ||
+      privateNote !== baseline.privateNote ||
       manualAdjustmentAmount !== baseline.manualAdjustmentAmount ||
       manualAdjustmentNote !== baseline.manualAdjustmentNote ||
       hiddenSections !== baseline.hiddenSections ||
@@ -203,6 +208,7 @@ const RecordPanel = forwardRef(function RecordPanel(
     bonusAmount,
     bonusNote,
     notes,
+    privateNote,
     manualAdjustmentAmount,
     manualAdjustmentNote,
     hiddenSections,
@@ -274,6 +280,7 @@ const RecordPanel = forwardRef(function RecordPanel(
         bonus_amount: bonusAmount === "" ? null : Number(bonusAmount),
         bonus_note: bonusNote === "" ? null : bonusNote,
         notes: notes === "" ? null : notes,
+        private_note: privateNote === "" ? null : privateNote,
         manual_adjustment_amount: manualAdjustmentAmount === "" ? null : Number(manualAdjustmentAmount),
         manual_adjustment_note: manualAdjustmentNote === "" ? null : manualAdjustmentNote,
         hidden_sections: hiddenSections,
@@ -414,6 +421,15 @@ const RecordPanel = forwardRef(function RecordPanel(
         <label className="notes-field">
           הערות חופשיות
           <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+        </label>
+
+        <label className="notes-field">
+          הערה לעצמי בלבד (לא מוצגת בתלוש)
+          <textarea
+            rows={3}
+            value={privateNote}
+            onChange={(e) => setPrivateNote(e.target.value)}
+          />
         </label>
 
         <div className="field-row">
