@@ -93,6 +93,20 @@
   color: var(--text-h);
 }
 
+.months-sidebar {
+  flex-basis: 300px;
+}
+
+.months-sidebar-card {
+  margin-top: 18px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.months-sidebar-card .ledger-columns {
+  flex-direction: column;
+}
+
 .add-form {
   display: flex;
   gap: 6px;
@@ -179,6 +193,30 @@
   margin-bottom: 14px;
   padding: 9px;
   font-size: 0.85rem;
+}
+
+.monthly-reminders {
+  background: #fff3d6;
+  border: 1px solid #f0d896;
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin-bottom: 18px;
+}
+
+.monthly-reminders-title {
+  margin: 0 0 6px;
+  font-weight: 700;
+  color: #a15c00;
+}
+
+.monthly-reminders ul {
+  margin: 0;
+  padding-inline-start: 20px;
+}
+
+.monthly-reminders li {
+  color: #7a4a00;
+  white-space: pre-wrap;
 }
 
 .record-header {
@@ -1223,6 +1261,25 @@ textarea:focus {
   display: flex;
   gap: 4px;
   justify-content: flex-end;
+}
+
+.monthly-reminder-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.monthly-reminder-badge {
+  display: inline-block;
+  margin-inline-end: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #a15c00;
+  background: #fff3d6;
+  border-radius: 999px;
+  padding: 2px 8px;
 }
 
 .card-only-badge {

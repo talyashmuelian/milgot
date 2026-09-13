@@ -43,7 +43,7 @@ const SECTION_LABELS = [
 ];
 
 const RecordPanel = forwardRef(function RecordPanel(
-  { avrechId, year, month, record, loading, onCalculateAttendance, onCalculateTotal },
+  { avrechId, year, month, record, loading, reminders, onCalculateAttendance, onCalculateTotal },
   ref
 ) {
   const [studyHours, setStudyHours] = useState("");
@@ -293,6 +293,17 @@ const RecordPanel = forwardRef(function RecordPanel(
 
   return (
     <main className="record-panel">
+      {reminders && reminders.length > 0 && (
+        <div className="monthly-reminders">
+          <p className="monthly-reminders-title">🔔 תזכורות חודשיות</p>
+          <ul>
+            {reminders.map((r) => (
+              <li key={r.id}>{r.text}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="record-header">
         <h3>
           {MONTH_NAMES[month - 1]} {year}

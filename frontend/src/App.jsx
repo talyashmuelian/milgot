@@ -15,6 +15,7 @@ import {
   getRecord,
   calculateAttendance,
   calculateTotal,
+  getAvrechCard,
 } from "./api";
 import "./App.css";
 
@@ -28,6 +29,7 @@ export default function App() {
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [record, setRecord] = useState(null);
   const [loadingRecord, setLoadingRecord] = useState(false);
+  const [avrechCard, setAvrechCard] = useState(null);
   const recordPanelRef = useRef(null);
 
   useEffect(() => {
@@ -45,8 +47,22 @@ export default function App() {
       .finally(() => setLoadingRecord(false));
   }, [selectedAvrechId, year, selectedMonth]);
 
+  useEffect(() => {
+    if (selectedAvrechId == null) {
+      setAvrechCard(null);
+      return;
+    }
+    refreshAvrechCard();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAvrechId]);
+
   function refreshAvreichim() {
     return listAvreichim().then(setAvreichim);
+  }
+
+  function refreshAvrechCard() {
+    if (selectedAvrechId == null) return Promise.resolve();
+    return getAvrechCard(selectedAvrechId).then(setAvrechCard);
   }
 
   async function handleAdd(name, childrenCount) {
@@ -107,6 +123,7 @@ export default function App() {
   }
 
   const selectedAvrech = avreichim.find((a) => a.id === selectedAvrechId) || null;
+  const reminders = (avrechCard?.updates || []).filter((u) => u.monthly_reminder);
 
   return (
     <div className="app-shell">
@@ -171,6 +188,8 @@ export default function App() {
               onYearChange={handleYearChange}
               selectedMonth={selectedMonth}
               onSelectMonth={handleSelectMonth}
+              avrechCard={avrechCard}
+              onCardChanged={refreshAvrechCard}
             />
           )}
 
@@ -181,6 +200,7 @@ export default function App() {
             month={selectedMonth}
             record={record}
             loading={loadingRecord}
+            reminders={reminders}
             onCalculateAttendance={handleCalculateAttendance}
             onCalculateTotal={handleCalculateTotal}
           />

@@ -147,23 +147,27 @@ export function listCards() {
   return fetch(`${BASE_URL}/cards`).then(handle);
 }
 
+export function getAvrechCard(avrechId) {
+  return fetch(`${BASE_URL}/avreichim/${avrechId}/card`).then(handle);
+}
+
 export function cardPdfUrl(avrechId) {
   return `${BASE_URL}/avreichim/${avrechId}/card/pdf`;
 }
 
-export function createUpdate(avrechId, text) {
+export function createUpdate(avrechId, text, monthlyReminder = false) {
   return fetch(`${BASE_URL}/avreichim/${avrechId}/updates`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text, monthly_reminder: monthlyReminder }),
   }).then(handle);
 }
 
-export function editUpdate(updateId, text) {
+export function editUpdate(updateId, text, monthlyReminder = false) {
   return fetch(`${BASE_URL}/updates/${updateId}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text, monthly_reminder: monthlyReminder }),
   }).then(handle);
 }
 

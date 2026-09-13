@@ -121,6 +121,10 @@ class AvrechUpdate(db.Model):
     created_at = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, nullable=True)
 
+    # When set, this update is shown at the top of every monthly record page
+    # for this avrech (any year/month), not just on their card.
+    monthly_reminder = db.Column(db.Boolean, nullable=False, default=False)
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -128,6 +132,7 @@ class AvrechUpdate(db.Model):
             "text": self.text,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "monthly_reminder": self.monthly_reminder,
         }
 
 

@@ -7,7 +7,6 @@ each string into its correct visual order; plain numbers are left alone
 since they render correctly without reordering.
 """
 
-import datetime
 import io
 import os
 import textwrap
@@ -91,15 +90,6 @@ _SECTION_HEADER_STYLE = ParagraphStyle(
 _SUBSECTION_HEADER_STYLE = ParagraphStyle(
     "subsection-header", fontName=FONT_NAME, fontSize=11, alignment=TA_RIGHT, spaceAfter=4
 )
-
-
-def _format_dt(iso_string):
-    if not iso_string:
-        return "-"
-    try:
-        return datetime.datetime.fromisoformat(iso_string).strftime("%d/%m/%Y %H:%M")
-    except ValueError:
-        return iso_string
 
 
 def _note_flowables(label, text):
@@ -393,23 +383,15 @@ def _ledger_table(entries):
     return _data_table(header, rows, [3 * cm, 3 * cm, note_width], font_size=9)
 
 
-def build_avrech_card_pdf(avrech_name, updates, ledger_entries):
-    """A printable version of one avrech's card from the Cards tab: the
-    free-text updates plus the full charge/credit ledger ("דף חשבון")."""
+def build_avrech_card_pdf(avrech_name, ledger_entries):
+    """A printable version of one avrech's card from the Cards tab: just the
+    charge/credit ledger ("דף חשבון") - the free-text updates are for
+    internal tracking only and are left out of the PDF."""
     _ensure_font()
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=RECORD_MARGIN, leftMargin=RECORD_MARGIN)
 
     story = [_title_table(f"כרטיס אברך - {avrech_name}", width=RECORD_CONTENT_WIDTH), Spacer(1, 0.3 * cm)]
-
-    story.append(Paragraph(he("עדכונים"), _SECTION_HEADER_STYLE))
-    if updates:
-        for update in updates:
-            story.extend(_note_flowables(_format_dt(update.get("created_at")), update["text"]))
-            story.append(Spacer(1, 0.2 * cm))
-    else:
-        story.append(Paragraph(he("אין עדכונים."), _NOTE_TEXT_STYLE))
-    story.append(Spacer(1, 0.3 * cm))
 
     story.append(Paragraph(he("דף חשבון"), _SECTION_HEADER_STYLE))
 

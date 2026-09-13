@@ -1,5 +1,6 @@
 import { MONTH_NAMES } from "../months";
 import { avrechReportPdfUrl, monthReportPdfUrl } from "../api";
+import AvrechCard from "./AvrechCard";
 
 export default function MonthsSidebar({
   avrechId,
@@ -8,6 +9,8 @@ export default function MonthsSidebar({
   onYearChange,
   selectedMonth,
   onSelectMonth,
+  avrechCard,
+  onCardChanged,
 }) {
   return (
     <aside className="sidebar months-sidebar">
@@ -43,6 +46,12 @@ export default function MonthsSidebar({
           );
         })}
       </ul>
+
+      {avrechCard && (
+        <div className="months-sidebar-card">
+          <AvrechCard avrech={avrechCard} onChanged={onCardChanged} />
+        </div>
+      )}
     </aside>
   );
 }

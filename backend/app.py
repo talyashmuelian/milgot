@@ -48,6 +48,7 @@ def _ensure_columns():
     inspector = inspect(db.engine)
     avrech_cols = {c["name"] for c in inspector.get_columns("avreichim")}
     record_cols = {c["name"] for c in inspector.get_columns("monthly_records")}
+    update_cols = {c["name"] for c in inspector.get_columns("avrech_updates")}
 
     with db.engine.begin() as conn:
         if "children_count" not in avrech_cols:
@@ -77,6 +78,10 @@ def _ensure_columns():
         ):
             if col not in record_cols:
                 conn.execute(text(f"ALTER TABLE monthly_records ADD COLUMN {col} TEXT"))
+        if "monthly_reminder" not in update_cols:
+            conn.execute(
+                text("ALTER TABLE avrech_updates ADD COLUMN monthly_reminder BOOLEAN NOT NULL DEFAULT 0")
+            )
 
 
 with app.app_context():
@@ -193,8 +198,10 @@ def list_cards():
     )
 
 
-@app.get("/api/avreichim/<int:avrech_id>/card/pdf")
-def avrech_card_pdf(avrech_id):
+@app.get("/api/avreichim/<int:avrech_id>/card")
+def avrech_card(avrech_id):
+    """One avrech's card (updates + ledger) - backs both the Cards tab and
+    the card duplicated at the bottom of their months list."""
     avrech = Avrech.query.get_or_404(avrech_id)
     updates = [
         u.to_dict()
@@ -204,7 +211,17 @@ def avrech_card_pdf(avrech_id):
         e.to_dict()
         for e in LedgerEntry.query.filter_by(avrech_id=avrech_id).order_by(LedgerEntry.date, LedgerEntry.id).all()
     ]
-    buf = build_avrech_card_pdf(avrech.name, updates, ledger_entries)
+    return jsonify({**avrech.to_dict(), "updates": updates, "ledger": ledger_entries})
+
+
+@app.get("/api/avreichim/<int:avrech_id>/card/pdf")
+def avrech_card_pdf(avrech_id):
+    avrech = Avrech.query.get_or_404(avrech_id)
+    ledger_entries = [
+        e.to_dict()
+        for e in LedgerEntry.query.filter_by(avrech_id=avrech_id).order_by(LedgerEntry.date, LedgerEntry.id).all()
+    ]
+    buf = build_avrech_card_pdf(avrech.name, ledger_entries)
     filename = f"card_{avrech_id}.pdf"
     return send_file(buf, mimetype="application/pdf", as_attachment=True, download_name=filename)
 
@@ -217,7 +234,9 @@ def create_avrech_update(avrech_id):
     if not text_value:
         return jsonify({"error": "text is required"}), 400
 
-    update = AvrechUpdate(avrech_id=avrech_id, text=text_value)
+    update = AvrechUpdate(
+        avrech_id=avrech_id, text=text_value, monthly_reminder=bool(data.get("monthly_reminder"))
+    )
     db.session.add(update)
     db.session.commit()
     return jsonify(update.to_dict()), 201
@@ -232,6 +251,7 @@ def update_avrech_update(update_id):
         return jsonify({"error": "text is required"}), 400
 
     update.text = text_value
+    update.monthly_reminder = bool(data.get("monthly_reminder"))
     update.updated_at = datetime.datetime.utcnow()
     db.session.commit()
     return jsonify(update.to_dict())
@@ -847,6 +867,7 @@ def restore():
                     text=u["text"],
                     created_at=datetime.datetime.fromisoformat(u["created_at"]) if u.get("created_at") else None,
                     updated_at=datetime.datetime.fromisoformat(u["updated_at"]) if u.get("updated_at") else None,
+                    monthly_reminder=bool(u.get("monthly_reminder")),
                 )
             )
 
