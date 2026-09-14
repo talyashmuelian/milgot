@@ -18,6 +18,11 @@ class Avrech(db.Model):
     # real avrech, so they're left out of the payroll list and reports.
     card_only = db.Column(db.Boolean, nullable=False, default=False)
 
+    # True for an avrech whose situation rarely changes month to month -
+    # sorted to the bottom of the avreichim list so the ones that do need
+    # attention each month are the ones at hand.
+    is_fixed = db.Column(db.Boolean, nullable=False, default=False)
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -25,6 +30,7 @@ class Avrech(db.Model):
             "children_count": self.children_count,
             "archived": self.archived,
             "card_only": self.card_only,
+            "is_fixed": self.is_fixed,
         }
 
 
@@ -59,6 +65,8 @@ class MonthlyRecord(db.Model):
     bonus_note = db.Column(db.Text, nullable=True)
     manual_adjustment_amount = db.Column(db.Float, nullable=True)
     manual_adjustment_note = db.Column(db.Text, nullable=True)
+    debt_repayment_amount = db.Column(db.Float, nullable=True)
+    debt_repayment_note = db.Column(db.Text, nullable=True)
     notes = db.Column(db.Text, nullable=True)
 
     # A private note that never appears on the PDF ("תלוש") or anywhere the
@@ -100,6 +108,8 @@ class MonthlyRecord(db.Model):
             "bonus_note": self.bonus_note,
             "manual_adjustment_amount": self.manual_adjustment_amount,
             "manual_adjustment_note": self.manual_adjustment_note,
+            "debt_repayment_amount": self.debt_repayment_amount,
+            "debt_repayment_note": self.debt_repayment_note,
             "notes": self.notes,
             "private_note": self.private_note,
             "hidden_sections": json.loads(self.hidden_sections) if self.hidden_sections else [],

@@ -27,6 +27,7 @@ const EMPTY_CHECKBOXES = {
 // Matches backend SECTION_LABELS in calculations.py - keep in sync.
 const SECTION_LABELS = [
   { key: "attendance", label: "נוכחות (שעות ואחוזים)" },
+  { key: "attendance_amount", label: "מלגת נוכחות" },
   { key: "enrichment", label: "העשרות" },
   { key: "emuna", label: "אמונה" },
   { key: "tanach", label: 'תנ"ך' },
@@ -39,6 +40,7 @@ const SECTION_LABELS = [
   { key: "special_arrangement", label: "הסדר מיוחד" },
   { key: "bonus", label: "בונוס" },
   { key: "manual_adjustment", label: "התאמה ידנית" },
+  { key: "debt_repayment", label: "החזר חוב" },
   { key: "notes", label: "הערות חופשיות" },
 ];
 
@@ -59,6 +61,8 @@ const RecordPanel = forwardRef(function RecordPanel(
   const [privateNote, setPrivateNote] = useState("");
   const [manualAdjustmentAmount, setManualAdjustmentAmount] = useState("");
   const [manualAdjustmentNote, setManualAdjustmentNote] = useState("");
+  const [debtRepaymentAmount, setDebtRepaymentAmount] = useState("");
+  const [debtRepaymentNote, setDebtRepaymentNote] = useState("");
   const [hiddenSections, setHiddenSections] = useState([]);
   const [averageExcludedSections, setAverageExcludedSections] = useState([]);
   const [expectedHours, setExpectedHours] = useState(null);
@@ -111,6 +115,8 @@ const RecordPanel = forwardRef(function RecordPanel(
     const loadedPrivateNote = record.private_note ?? "";
     const loadedManualAdjustmentAmount = record.manual_adjustment_amount ?? "";
     const loadedManualAdjustmentNote = record.manual_adjustment_note ?? "";
+    const loadedDebtRepaymentAmount = record.debt_repayment_amount ?? "";
+    const loadedDebtRepaymentNote = record.debt_repayment_note ?? "";
     const loadedHiddenSections = record.hidden_sections ?? [];
     const loadedAverageExcludedSections = record.average_excluded_sections ?? [];
 
@@ -125,6 +131,8 @@ const RecordPanel = forwardRef(function RecordPanel(
     setPrivateNote(loadedPrivateNote);
     setManualAdjustmentAmount(loadedManualAdjustmentAmount);
     setManualAdjustmentNote(loadedManualAdjustmentNote);
+    setDebtRepaymentAmount(loadedDebtRepaymentAmount);
+    setDebtRepaymentNote(loadedDebtRepaymentNote);
     setHiddenSections(loadedHiddenSections);
     setAverageExcludedSections(loadedAverageExcludedSections);
 
@@ -140,6 +148,8 @@ const RecordPanel = forwardRef(function RecordPanel(
       privateNote: loadedPrivateNote,
       manualAdjustmentAmount: loadedManualAdjustmentAmount,
       manualAdjustmentNote: loadedManualAdjustmentNote,
+      debtRepaymentAmount: loadedDebtRepaymentAmount,
+      debtRepaymentNote: loadedDebtRepaymentNote,
       hiddenSections: loadedHiddenSections,
       averageExcludedSections: loadedAverageExcludedSections,
     };
@@ -185,6 +195,8 @@ const RecordPanel = forwardRef(function RecordPanel(
       privateNote !== baseline.privateNote ||
       manualAdjustmentAmount !== baseline.manualAdjustmentAmount ||
       manualAdjustmentNote !== baseline.manualAdjustmentNote ||
+      debtRepaymentAmount !== baseline.debtRepaymentAmount ||
+      debtRepaymentNote !== baseline.debtRepaymentNote ||
       hiddenSections !== baseline.hiddenSections ||
       averageExcludedSections !== baseline.averageExcludedSections;
     if (!changed) {
@@ -211,6 +223,8 @@ const RecordPanel = forwardRef(function RecordPanel(
     privateNote,
     manualAdjustmentAmount,
     manualAdjustmentNote,
+    debtRepaymentAmount,
+    debtRepaymentNote,
     hiddenSections,
     averageExcludedSections,
   ]);
@@ -283,6 +297,8 @@ const RecordPanel = forwardRef(function RecordPanel(
         private_note: privateNote === "" ? null : privateNote,
         manual_adjustment_amount: manualAdjustmentAmount === "" ? null : Number(manualAdjustmentAmount),
         manual_adjustment_note: manualAdjustmentNote === "" ? null : manualAdjustmentNote,
+        debt_repayment_amount: debtRepaymentAmount === "" ? null : Number(debtRepaymentAmount),
+        debt_repayment_note: debtRepaymentNote === "" ? null : debtRepaymentNote,
         hidden_sections: hiddenSections,
         average_excluded_sections: averageExcludedSections,
       });
@@ -458,6 +474,26 @@ const RecordPanel = forwardRef(function RecordPanel(
               type="text"
               value={manualAdjustmentNote}
               onChange={(e) => setManualAdjustmentNote(e.target.value)}
+            />
+          </label>
+        </div>
+
+        <div className="field-row">
+          <label>
+            החזר חוב - סכום
+            <input
+              type="number"
+              min="0"
+              value={debtRepaymentAmount}
+              onChange={(e) => setDebtRepaymentAmount(e.target.value)}
+            />
+          </label>
+          <label className="note-field">
+            פירוט החזר החוב
+            <input
+              type="text"
+              value={debtRepaymentNote}
+              onChange={(e) => setDebtRepaymentNote(e.target.value)}
             />
           </label>
         </div>

@@ -57,6 +57,8 @@ def _ensure_columns():
             conn.execute(text("ALTER TABLE avreichim ADD COLUMN archived BOOLEAN NOT NULL DEFAULT 0"))
         if "card_only" not in avrech_cols:
             conn.execute(text("ALTER TABLE avreichim ADD COLUMN card_only BOOLEAN NOT NULL DEFAULT 0"))
+        if "is_fixed" not in avrech_cols:
+            conn.execute(text("ALTER TABLE avreichim ADD COLUMN is_fixed BOOLEAN NOT NULL DEFAULT 0"))
         for col in ("emuna", "tanach", "review_test", "enrichment", "reserve_duty", "regular_service"):
             if col not in record_cols:
                 conn.execute(text(f"ALTER TABLE monthly_records ADD COLUMN {col} BOOLEAN NOT NULL DEFAULT 0"))
@@ -64,6 +66,7 @@ def _ensure_columns():
             "special_arrangement_amount",
             "bonus_amount",
             "manual_adjustment_amount",
+            "debt_repayment_amount",
         ):
             if col not in record_cols:
                 conn.execute(text(f"ALTER TABLE monthly_records ADD COLUMN {col} FLOAT"))
@@ -71,6 +74,7 @@ def _ensure_columns():
             "special_arrangement_note",
             "bonus_note",
             "manual_adjustment_note",
+            "debt_repayment_note",
             "notes",
             "private_note",
             "hidden_sections",
@@ -107,7 +111,9 @@ def frontend_asset(filename):
 @app.get("/api/avreichim")
 def list_avreichim():
     avreichim = (
-        Avrech.query.filter_by(archived=False, card_only=False).order_by(Avrech.name).all()
+        Avrech.query.filter_by(archived=False, card_only=False)
+        .order_by(Avrech.is_fixed, Avrech.name)
+        .all()
     )
     return jsonify([a.to_dict() for a in avreichim])
 
@@ -126,7 +132,8 @@ def create_avrech():
         return jsonify({"error": "name is required"}), 400
     children_count = int(data.get("children_count") or 0)
     card_only = bool(data.get("card_only") or False)
-    avrech = Avrech(name=name, children_count=children_count, card_only=card_only)
+    is_fixed = bool(data.get("is_fixed") or False)
+    avrech = Avrech(name=name, children_count=children_count, card_only=card_only, is_fixed=is_fixed)
     db.session.add(avrech)
     db.session.commit()
     return jsonify(avrech.to_dict()), 201
@@ -141,6 +148,7 @@ def update_avrech(avrech_id):
         return jsonify({"error": "name is required"}), 400
     avrech.name = name
     avrech.children_count = int(data.get("children_count") or 0)
+    avrech.is_fixed = bool(data.get("is_fixed") or False)
     db.session.commit()
     return jsonify(avrech.to_dict())
 
@@ -177,7 +185,9 @@ def delete_avrech(avrech_id):
 
 @app.get("/api/cards")
 def list_cards():
-    avreichim = Avrech.query.filter_by(archived=False).order_by(Avrech.name).all()
+    avreichim = (
+        Avrech.query.filter_by(archived=False).order_by(Avrech.is_fixed, Avrech.name).all()
+    )
     updates_by_avrech = {}
     for u in AvrechUpdate.query.order_by(AvrechUpdate.created_at.desc()).all():
         updates_by_avrech.setdefault(u.avrech_id, []).append(u.to_dict())
@@ -369,6 +379,8 @@ def _empty_record(avrech_id, year, month):
         "bonus_note": None,
         "manual_adjustment_amount": None,
         "manual_adjustment_note": None,
+        "debt_repayment_amount": None,
+        "debt_repayment_note": None,
         "notes": None,
         "private_note": None,
         "hidden_sections": [],
@@ -452,6 +464,8 @@ def calculate_total(avrech_id, year, month):
     record.bonus_note = data.get("bonus_note")
     record.manual_adjustment_amount = data.get("manual_adjustment_amount")
     record.manual_adjustment_note = data.get("manual_adjustment_note")
+    record.debt_repayment_amount = data.get("debt_repayment_amount")
+    record.debt_repayment_note = data.get("debt_repayment_note")
     record.notes = data.get("notes")
     record.private_note = data.get("private_note")
 
@@ -470,6 +484,7 @@ def calculate_total(avrech_id, year, month):
         record.special_arrangement_amount,
         record.bonus_amount,
         record.manual_adjustment_amount,
+        record.debt_repayment_amount,
     )
     db.session.commit()
     return jsonify(_with_attendance_percentage(record.to_dict(), year, month))
@@ -771,6 +786,7 @@ def backup():
                 "children_count": a.children_count,
                 "archived": a.archived,
                 "card_only": a.card_only,
+                "is_fixed": a.is_fixed,
             }
             for a in avreichim
         ],
@@ -812,6 +828,7 @@ def restore():
                     children_count=a.get("children_count", 0),
                     archived=bool(a.get("archived", False)),
                     card_only=bool(a.get("card_only", False)),
+                    is_fixed=bool(a.get("is_fixed", False)),
                 )
             )
 
@@ -839,6 +856,8 @@ def restore():
                     bonus_note=r.get("bonus_note"),
                     manual_adjustment_amount=r.get("manual_adjustment_amount"),
                     manual_adjustment_note=r.get("manual_adjustment_note"),
+                    debt_repayment_amount=r.get("debt_repayment_amount"),
+                    debt_repayment_note=r.get("debt_repayment_note"),
                     notes=r.get("notes"),
                     private_note=r.get("private_note"),
                     hidden_sections=json.dumps(r["hidden_sections"]) if r.get("hidden_sections") else None,

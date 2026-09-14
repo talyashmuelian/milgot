@@ -116,6 +116,26 @@
   font-weight: 400;
 }
 
+.fixed-avrech-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--text);
+  margin-bottom: 14px;
+}
+
+.fixed-avrech-badge {
+  margin-inline-start: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--bg-page);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+
 .students-list,
 .months-list {
   list-style: none;

@@ -13,9 +13,9 @@ each override the attendance+extras calculation with a flat base (0
 and RESERVE_DUTY_AMOUNT respectively) - only one can apply, regular
 service takes priority if both are somehow checked.
 
-Special arrangement / bonus / manual adjustment: three independent
-optional line items that add on top of whatever base applies (normal
-attendance+extras, or one of the flat overrides above). Only the
+Special arrangement / bonus / manual adjustment / debt repayment: four
+independent optional line items that add on top of whatever base applies
+(normal attendance+extras, or one of the flat overrides above). Only the
 manual adjustment is expected to ever be negative.
 """
 
@@ -52,6 +52,7 @@ RESERVE_DUTY_AMOUNT = 500.0
 # checkbox in the UI and a Hebrew label used both there and in the PDF.
 SECTION_LABELS = {
     "attendance": "נוכחות (שעות ואחוזים)",
+    "attendance_amount": "מלגת נוכחות",
     "enrichment": "העשרות",
     "emuna": "אמונה",
     "tanach": 'תנ"ך',
@@ -64,6 +65,7 @@ SECTION_LABELS = {
     "special_arrangement": "הסדר מיוחד",
     "bonus": "בונוס",
     "manual_adjustment": "התאמה ידנית",
+    "debt_repayment": "החזר חוב",
     "notes": "הערות חופשיות",
 }
 SECTION_KEYS = list(SECTION_LABELS.keys())
@@ -103,6 +105,7 @@ def calculate_total_stipend(
     special_arrangement_amount,
     bonus_amount,
     manual_adjustment_amount,
+    debt_repayment_amount=None,
 ):
     if regular_service:
         base = 0.0
@@ -117,6 +120,7 @@ def calculate_total_stipend(
         + (special_arrangement_amount or 0.0)
         + (bonus_amount or 0.0)
         + (manual_adjustment_amount or 0.0)
+        + (debt_repayment_amount or 0.0)
     )
 
 
@@ -138,6 +142,8 @@ def compute_actual_record(record_dict):
         actual["excluded_hours"] = None
         actual["attendance_percentage"] = None
         actual["attendance_amount"] = 0.0
+    if "attendance_amount" in excluded:
+        actual["attendance_amount"] = 0.0
 
     for key in EXTRA_FIELDS:
         if key in excluded:
@@ -153,6 +159,8 @@ def compute_actual_record(record_dict):
         actual["bonus_amount"] = None
     if "manual_adjustment" in excluded:
         actual["manual_adjustment_amount"] = None
+    if "debt_repayment" in excluded:
+        actual["debt_repayment_amount"] = None
 
     extras = {key: actual.get(key, False) for key in EXTRA_FIELDS}
     actual["total_amount"] = calculate_total_stipend(
@@ -163,5 +171,6 @@ def compute_actual_record(record_dict):
         actual.get("special_arrangement_amount"),
         actual.get("bonus_amount"),
         actual.get("manual_adjustment_amount"),
+        actual.get("debt_repayment_amount"),
     )
     return actual

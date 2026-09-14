@@ -23,6 +23,7 @@ const COLUMNS = [
   { key: "review_test", label: "מבחן חזרה", type: "bool" },
   { key: "enrichment", label: "העשרות", type: "bool" },
   { key: "reserve_duty", label: "מילואים", type: "bool" },
+  { key: "debt_repayment_amount", label: "החזר חוב", type: "amount" },
   { key: "total_amount", label: 'סה"כ מלגה', type: "amount" },
 ];
 

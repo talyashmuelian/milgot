@@ -67,14 +67,14 @@ export default function App() {
     return getAvrechCard(selectedAvrechId).then(setAvrechCard);
   }
 
-  async function handleAdd(name, childrenCount) {
-    const avrech = await createAvrech(name, childrenCount);
+  async function handleAdd(name, childrenCount, isFixed) {
+    const avrech = await createAvrech(name, childrenCount, false, isFixed);
     await refreshAvreichim();
     setSelectedAvrechId(avrech.id);
   }
 
-  async function handleRename(id, name, childrenCount) {
-    await updateAvrech(id, name, childrenCount);
+  async function handleRename(id, name, childrenCount, isFixed) {
+    await updateAvrech(id, name, childrenCount, isFixed);
     await refreshAvreichim();
   }
 

@@ -156,6 +156,7 @@ def _record_fields(record):
         _yesno(record.get("review_test")),
         _yesno(record.get("enrichment")),
         _yesno(record.get("reserve_duty")),
+        _amount(record.get("debt_repayment_amount")),
         _amount(record.get("total_amount")),
     ]
 
@@ -172,11 +173,12 @@ FIELD_HEADERS = [
     "מבחן חזרה",
     "העשרות",
     "מילואים",
+    "החזר חוב",
     'סה"כ מלגה',
 ]
 
-# before the row-label column; tuned to fit landscape A4 with 12 data columns
-FIELD_WIDTHS = [w * cm for w in (1.8, 1.9, 2, 1.6, 1.3, 1.3, 1.3, 1.4, 1.7, 1.5, 1.5, 2)]
+# before the row-label column; tuned to fit landscape A4 with 13 data columns
+FIELD_WIDTHS = [w * cm for w in (1.8, 1.9, 2, 1.6, 1.3, 1.3, 1.3, 1.4, 1.7, 1.5, 1.5, 1.8, 2)]
 
 
 RECORD_MARGIN = 1.5 * cm
@@ -240,16 +242,14 @@ def build_record_pdf(avrech_name, year, month, record):
     story.append(Spacer(1, 0.3 * cm))
 
     if "attendance" not in hidden:
-        story.append(
-            _record_section_table(
-                [
-                    [he("שעות לימוד"), _hours(record.get("study_hours"))],
-                    [he("שעות מוחרגות"), _hours(record.get("excluded_hours"))],
-                    [he("אחוז נוכחות"), _percentage(record.get("attendance_percentage"))],
-                    [he("מלגת נוכחות"), _amount(record.get("attendance_amount"))],
-                ]
-            )
-        )
+        attendance_rows = [
+            [he("שעות לימוד"), _hours(record.get("study_hours"))],
+            [he("שעות מוחרגות"), _hours(record.get("excluded_hours"))],
+            [he("אחוז נוכחות"), _percentage(record.get("attendance_percentage"))],
+        ]
+        if "attendance_amount" not in hidden:
+            attendance_rows.append([he("מלגת נוכחות"), _amount(record.get("attendance_amount"))])
+        story.append(_record_section_table(attendance_rows))
         story.append(Spacer(1, 0.3 * cm))
 
     extras_rows = [
@@ -300,6 +300,17 @@ def build_record_pdf(avrech_name, year, month, record):
         if record.get("manual_adjustment_note"):
             story.append(Spacer(1, 0.15 * cm))
             story.extend(_note_flowables("פירוט ההתאמה", record["manual_adjustment_note"]))
+        story.append(Spacer(1, 0.3 * cm))
+
+    if "debt_repayment" not in hidden:
+        story.append(
+            _record_section_table(
+                [[he("החזר חוב - סכום"), _amount(record.get("debt_repayment_amount"))]]
+            )
+        )
+        if record.get("debt_repayment_note"):
+            story.append(Spacer(1, 0.15 * cm))
+            story.extend(_note_flowables("פירוט החזר החוב", record["debt_repayment_note"]))
         story.append(Spacer(1, 0.3 * cm))
 
     if "notes" not in hidden and record.get("notes"):

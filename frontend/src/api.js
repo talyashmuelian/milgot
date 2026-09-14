@@ -13,19 +13,24 @@ export function listAvreichim() {
   return fetch(`${BASE_URL}/avreichim`).then(handle);
 }
 
-export function createAvrech(name, childrenCount, cardOnly = false) {
+export function createAvrech(name, childrenCount, cardOnly = false, isFixed = false) {
   return fetch(`${BASE_URL}/avreichim`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, children_count: childrenCount, card_only: cardOnly }),
+    body: JSON.stringify({
+      name,
+      children_count: childrenCount,
+      card_only: cardOnly,
+      is_fixed: isFixed,
+    }),
   }).then(handle);
 }
 
-export function updateAvrech(id, name, childrenCount) {
+export function updateAvrech(id, name, childrenCount, isFixed = false) {
   return fetch(`${BASE_URL}/avreichim/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, children_count: childrenCount }),
+    body: JSON.stringify({ name, children_count: childrenCount, is_fixed: isFixed }),
   }).then(handle);
 }
 

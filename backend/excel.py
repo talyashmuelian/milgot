@@ -20,7 +20,7 @@ TITLE_FONT = Font(bold=True, size=14)
 AMOUNT_FORMAT = '#,##0" ש״ח"'  # ...ש"ח
 
 # column widths, aligned with FIELD_HEADERS order
-FIELD_WIDTHS = [12, 14, 14, 12, 10, 10, 10, 10, 12, 10, 10, 14]
+FIELD_WIDTHS = [12, 14, 14, 12, 10, 10, 10, 10, 12, 10, 10, 12, 14]
 
 
 def _yesno(value):
@@ -40,11 +40,13 @@ def _record_row(record):
         _yesno(record.get("review_test")),
         _yesno(record.get("enrichment")),
         _yesno(record.get("reserve_duty")),
+        record.get("debt_repayment_amount"),
         record.get("total_amount"),
     ]
 
 
-AMOUNT_COLUMNS = {4, 13}  # sheet column numbers holding attendance_amount / total_amount
+# sheet column numbers holding attendance_amount / debt_repayment_amount / total_amount
+AMOUNT_COLUMNS = {4, 13, 14}
 
 
 def _write_sheet(ws, title, row_label_header, row_label_width, rows):
