@@ -242,6 +242,16 @@
   margin-bottom: 22px;
 }
 
+.record-header-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.record-header-title .fixed-avrech-checkbox {
+  margin-bottom: 0;
+}
+
 .record-header h3 {
   margin: 0;
   font-size: 1.2rem;

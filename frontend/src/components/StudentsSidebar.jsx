@@ -10,34 +10,30 @@ export default function StudentsSidebar({
 }) {
   const [newName, setNewName] = useState("");
   const [newChildren, setNewChildren] = useState("");
-  const [newIsFixed, setNewIsFixed] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editingName, setEditingName] = useState("");
   const [editingChildren, setEditingChildren] = useState("");
-  const [editingIsFixed, setEditingIsFixed] = useState(false);
 
   function submitNew(e) {
     e.preventDefault();
     const name = newName.trim();
     if (!name) return;
-    onAdd(name, newChildren === "" ? 0 : Number(newChildren), newIsFixed);
+    onAdd(name, newChildren === "" ? 0 : Number(newChildren));
     setNewName("");
     setNewChildren("");
-    setNewIsFixed(false);
   }
 
   function startEdit(avrech) {
     setEditingId(avrech.id);
     setEditingName(avrech.name);
     setEditingChildren(String(avrech.children_count ?? 0));
-    setEditingIsFixed(avrech.is_fixed || false);
   }
 
   function submitEdit(e) {
     e.preventDefault();
     const name = editingName.trim();
     if (!name) return;
-    onRename(editingId, name, editingChildren === "" ? 0 : Number(editingChildren), editingIsFixed);
+    onRename(editingId, name, editingChildren === "" ? 0 : Number(editingChildren));
     setEditingId(null);
   }
 
@@ -62,15 +58,6 @@ export default function StudentsSidebar({
         />
         <button type="submit">הוסף</button>
       </form>
-
-      <label className="fixed-avrech-checkbox">
-        <input
-          type="checkbox"
-          checked={newIsFixed}
-          onChange={(e) => setNewIsFixed(e.target.checked)}
-        />
-        אברך קבוע
-      </label>
 
       <ul className="students-list">
         {avreichim.map((avrech) => (
@@ -106,14 +93,6 @@ export default function StudentsSidebar({
                     ✕
                   </button>
                 </div>
-                <label className="fixed-avrech-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={editingIsFixed}
-                    onChange={(e) => setEditingIsFixed(e.target.checked)}
-                  />
-                  אברך קבוע
-                </label>
               </form>
             ) : (
               <>

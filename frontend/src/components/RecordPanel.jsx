@@ -45,7 +45,18 @@ const SECTION_LABELS = [
 ];
 
 const RecordPanel = forwardRef(function RecordPanel(
-  { avrechId, year, month, record, loading, reminders, onCalculateAttendance, onCalculateTotal },
+  {
+    avrechId,
+    year,
+    month,
+    record,
+    loading,
+    reminders,
+    isFixed,
+    onToggleFixed,
+    onCalculateAttendance,
+    onCalculateTotal,
+  },
   ref
 ) {
   const [studyHours, setStudyHours] = useState("");
@@ -321,9 +332,15 @@ const RecordPanel = forwardRef(function RecordPanel(
       )}
 
       <div className="record-header">
-        <h3>
-          {MONTH_NAMES[month - 1]} {year}
-        </h3>
+        <div className="record-header-title">
+          <h3>
+            {MONTH_NAMES[month - 1]} {year}
+          </h3>
+          <label className="fixed-avrech-checkbox" title="מאפיין של האברך, לא של החודש הזה בלבד">
+            <input type="checkbox" checked={isFixed} onChange={onToggleFixed} />
+            אברך קבוע
+          </label>
+        </div>
         <button
           className="pdf-link"
           onClick={() => window.open(recordPdfUrl(avrechId, year, month), "_blank")}

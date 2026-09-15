@@ -67,14 +67,25 @@ export default function App() {
     return getAvrechCard(selectedAvrechId).then(setAvrechCard);
   }
 
-  async function handleAdd(name, childrenCount, isFixed) {
-    const avrech = await createAvrech(name, childrenCount, false, isFixed);
+  async function handleAdd(name, childrenCount) {
+    const avrech = await createAvrech(name, childrenCount);
     await refreshAvreichim();
     setSelectedAvrechId(avrech.id);
   }
 
-  async function handleRename(id, name, childrenCount, isFixed) {
-    await updateAvrech(id, name, childrenCount, isFixed);
+  async function handleRename(id, name, childrenCount) {
+    await updateAvrech(id, name, childrenCount, avreichim.find((a) => a.id === id)?.is_fixed);
+    await refreshAvreichim();
+  }
+
+  async function handleToggleFixed() {
+    if (!selectedAvrech) return;
+    await updateAvrech(
+      selectedAvrech.id,
+      selectedAvrech.name,
+      selectedAvrech.children_count,
+      !selectedAvrech.is_fixed
+    );
     await refreshAvreichim();
   }
 
@@ -213,6 +224,8 @@ export default function App() {
               record={record}
               loading={loadingRecord}
               reminders={reminders}
+              isFixed={selectedAvrech?.is_fixed || false}
+              onToggleFixed={handleToggleFixed}
               onCalculateAttendance={handleCalculateAttendance}
               onCalculateTotal={handleCalculateTotal}
             />
