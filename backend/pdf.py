@@ -8,6 +8,7 @@ since they render correctly without reordering.
 """
 
 import io
+import math
 import os
 import textwrap
 
@@ -75,7 +76,9 @@ def _yesno(value):
 
 
 def _percentage(value):
-    return "-" if value is None else f"{value:g}%"
+    """Whole-percent, rounded down - the payslip shows a simpler number than
+    the site's own decimal display (kept as-is via the JSON API)."""
+    return "-" if value is None else f"{math.floor(value)}%"
 
 
 _NOTE_LABEL_STYLE = ParagraphStyle(
