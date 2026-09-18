@@ -225,9 +225,12 @@ _EXTRA_SECTION_LABELS = [
 
 
 def build_record_pdf(avrech_name, year, month, record):
-    """The per-avrech, per-month payslip ("תלוש"). Shows every part of the
-    calculator - amounts, checkboxes, and any free text written in - except
-    sections the user chose to hide for this specific record."""
+    """The per-avrech, per-month payslip ("תלוש"). Shows the core sections
+    (attendance, extras checkboxes) unless hidden; the optional add-on
+    sections (reserve/regular service, special arrangement, bonus, manual
+    adjustment, debt repayment, notes) only when they actually have
+    something to show - an empty one is left out by default, on top of
+    whatever the user chose to hide explicitly."""
     _ensure_font()
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=RECORD_MARGIN, leftMargin=RECORD_MARGIN)
@@ -261,17 +264,17 @@ def build_record_pdf(avrech_name, year, month, record):
         story.append(_record_section_table(extras_rows))
         story.append(Spacer(1, 0.3 * cm))
 
-    if "reserve_duty" not in hidden:
+    if "reserve_duty" not in hidden and record.get("reserve_duty"):
         story.append(_record_section_table([[he("מילואים"), _yesno(record.get("reserve_duty"))]]))
         story.append(Spacer(1, 0.3 * cm))
 
-    if "regular_service" not in hidden:
+    if "regular_service" not in hidden and record.get("regular_service"):
         story.append(
             _record_section_table([[he("שירות צבאי סדיר"), _yesno(record.get("regular_service"))]])
         )
         story.append(Spacer(1, 0.3 * cm))
 
-    if "special_arrangement" not in hidden:
+    if "special_arrangement" not in hidden and record.get("special_arrangement_amount"):
         story.append(
             _record_section_table(
                 [[he("הסדר מיוחד - סכום"), _amount(record.get("special_arrangement_amount"))]]
@@ -282,7 +285,7 @@ def build_record_pdf(avrech_name, year, month, record):
             story.extend(_note_flowables("פירוט ההסדר", record["special_arrangement_note"]))
         story.append(Spacer(1, 0.3 * cm))
 
-    if "bonus" not in hidden:
+    if "bonus" not in hidden and record.get("bonus_amount"):
         story.append(
             _record_section_table([[he("בונוס - סכום"), _amount(record.get("bonus_amount"))]])
         )
@@ -291,7 +294,7 @@ def build_record_pdf(avrech_name, year, month, record):
             story.extend(_note_flowables("הערה לבונוס", record["bonus_note"]))
         story.append(Spacer(1, 0.3 * cm))
 
-    if "manual_adjustment" not in hidden:
+    if "manual_adjustment" not in hidden and record.get("manual_adjustment_amount"):
         story.append(
             _record_section_table(
                 [[he("התאמה ידנית - סכום"), _amount(record.get("manual_adjustment_amount"))]]
@@ -302,7 +305,7 @@ def build_record_pdf(avrech_name, year, month, record):
             story.extend(_note_flowables("פירוט ההתאמה", record["manual_adjustment_note"]))
         story.append(Spacer(1, 0.3 * cm))
 
-    if "debt_repayment" not in hidden:
+    if "debt_repayment" not in hidden and record.get("debt_repayment_amount"):
         story.append(
             _record_section_table(
                 [[he("החזר חוב - סכום"), _amount(record.get("debt_repayment_amount"))]]
