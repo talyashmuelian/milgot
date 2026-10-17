@@ -61,6 +61,8 @@ class MonthlyRecord(db.Model):
 
     special_arrangement_amount = db.Column(db.Float, nullable=True)
     special_arrangement_note = db.Column(db.Text, nullable=True)
+    american_scholarship_amount = db.Column(db.Float, nullable=True)
+    american_scholarship_note = db.Column(db.Text, nullable=True)
     bonus_amount = db.Column(db.Float, nullable=True)
     bonus_note = db.Column(db.Text, nullable=True)
     manual_adjustment_amount = db.Column(db.Float, nullable=True)
@@ -104,6 +106,8 @@ class MonthlyRecord(db.Model):
             "regular_service": self.regular_service,
             "special_arrangement_amount": self.special_arrangement_amount,
             "special_arrangement_note": self.special_arrangement_note,
+            "american_scholarship_amount": self.american_scholarship_amount,
+            "american_scholarship_note": self.american_scholarship_note,
             "bonus_amount": self.bonus_amount,
             "bonus_note": self.bonus_note,
             "manual_adjustment_amount": self.manual_adjustment_amount,

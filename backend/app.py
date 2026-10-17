@@ -64,6 +64,7 @@ def _ensure_columns():
                 conn.execute(text(f"ALTER TABLE monthly_records ADD COLUMN {col} BOOLEAN NOT NULL DEFAULT 0"))
         for col in (
             "special_arrangement_amount",
+            "american_scholarship_amount",
             "bonus_amount",
             "manual_adjustment_amount",
             "debt_repayment_amount",
@@ -72,6 +73,7 @@ def _ensure_columns():
                 conn.execute(text(f"ALTER TABLE monthly_records ADD COLUMN {col} FLOAT"))
         for col in (
             "special_arrangement_note",
+            "american_scholarship_note",
             "bonus_note",
             "manual_adjustment_note",
             "debt_repayment_note",
@@ -375,6 +377,8 @@ def _empty_record(avrech_id, year, month):
         "regular_service": False,
         "special_arrangement_amount": None,
         "special_arrangement_note": None,
+        "american_scholarship_amount": None,
+        "american_scholarship_note": None,
         "bonus_amount": None,
         "bonus_note": None,
         "manual_adjustment_amount": None,
@@ -460,6 +464,8 @@ def calculate_total(avrech_id, year, month):
     record.regular_service = bool(data.get("regular_service"))
     record.special_arrangement_amount = data.get("special_arrangement_amount")
     record.special_arrangement_note = data.get("special_arrangement_note")
+    record.american_scholarship_amount = data.get("american_scholarship_amount")
+    record.american_scholarship_note = data.get("american_scholarship_note")
     record.bonus_amount = data.get("bonus_amount")
     record.bonus_note = data.get("bonus_note")
     record.manual_adjustment_amount = data.get("manual_adjustment_amount")
@@ -485,6 +491,7 @@ def calculate_total(avrech_id, year, month):
         record.bonus_amount,
         record.manual_adjustment_amount,
         record.debt_repayment_amount,
+        record.american_scholarship_amount,
     )
     db.session.commit()
     return jsonify(_with_attendance_percentage(record.to_dict(), year, month))
@@ -852,6 +859,8 @@ def restore():
                     regular_service=bool(r.get("regular_service")),
                     special_arrangement_amount=r.get("special_arrangement_amount"),
                     special_arrangement_note=r.get("special_arrangement_note"),
+                    american_scholarship_amount=r.get("american_scholarship_amount"),
+                    american_scholarship_note=r.get("american_scholarship_note"),
                     bonus_amount=r.get("bonus_amount"),
                     bonus_note=r.get("bonus_note"),
                     manual_adjustment_amount=r.get("manual_adjustment_amount"),

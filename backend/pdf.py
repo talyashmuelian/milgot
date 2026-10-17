@@ -288,6 +288,17 @@ def build_record_pdf(avrech_name, year, month, record):
             story.extend(_note_flowables("פירוט ההסדר", record["special_arrangement_note"]))
         story.append(Spacer(1, 0.3 * cm))
 
+    if "american_scholarship" not in hidden and record.get("american_scholarship_amount"):
+        story.append(
+            _record_section_table(
+                [[he("מלגה מהאמריקאים - סכום"), _amount(record.get("american_scholarship_amount"))]]
+            )
+        )
+        if record.get("american_scholarship_note"):
+            story.append(Spacer(1, 0.15 * cm))
+            story.extend(_note_flowables("הערה למלגה מהאמריקאים", record["american_scholarship_note"]))
+        story.append(Spacer(1, 0.3 * cm))
+
     if "bonus" not in hidden and record.get("bonus_amount"):
         story.append(
             _record_section_table([[he("בונוס - סכום"), _amount(record.get("bonus_amount"))]])

@@ -38,6 +38,7 @@ const SECTION_LABELS = [
   { key: "reserve_duty", label: "מילואים" },
   { key: "regular_service", label: "שירות צבאי סדיר" },
   { key: "special_arrangement", label: "הסדר מיוחד" },
+  { key: "american_scholarship", label: "מלגה מהאמריקאים" },
   { key: "bonus", label: "בונוס" },
   { key: "manual_adjustment", label: "התאמה ידנית" },
   { key: "debt_repayment", label: "החזר חוב" },
@@ -66,6 +67,8 @@ const RecordPanel = forwardRef(function RecordPanel(
   const [regularService, setRegularService] = useState(false);
   const [specialArrangementAmount, setSpecialArrangementAmount] = useState("");
   const [specialArrangementNote, setSpecialArrangementNote] = useState("");
+  const [americanScholarshipAmount, setAmericanScholarshipAmount] = useState("");
+  const [americanScholarshipNote, setAmericanScholarshipNote] = useState("");
   const [bonusAmount, setBonusAmount] = useState("");
   const [bonusNote, setBonusNote] = useState("");
   const [notes, setNotes] = useState("");
@@ -120,6 +123,8 @@ const RecordPanel = forwardRef(function RecordPanel(
     const loadedRegularService = record.regular_service ?? false;
     const loadedSpecialArrangementAmount = record.special_arrangement_amount ?? "";
     const loadedSpecialArrangementNote = record.special_arrangement_note ?? "";
+    const loadedAmericanScholarshipAmount = record.american_scholarship_amount ?? "";
+    const loadedAmericanScholarshipNote = record.american_scholarship_note ?? "";
     const loadedBonusAmount = record.bonus_amount ?? "";
     const loadedBonusNote = record.bonus_note ?? "";
     const loadedNotes = record.notes ?? "";
@@ -136,6 +141,8 @@ const RecordPanel = forwardRef(function RecordPanel(
     setRegularService(loadedRegularService);
     setSpecialArrangementAmount(loadedSpecialArrangementAmount);
     setSpecialArrangementNote(loadedSpecialArrangementNote);
+    setAmericanScholarshipAmount(loadedAmericanScholarshipAmount);
+    setAmericanScholarshipNote(loadedAmericanScholarshipNote);
     setBonusAmount(loadedBonusAmount);
     setBonusNote(loadedBonusNote);
     setNotes(loadedNotes);
@@ -153,6 +160,8 @@ const RecordPanel = forwardRef(function RecordPanel(
       regularService: loadedRegularService,
       specialArrangementAmount: loadedSpecialArrangementAmount,
       specialArrangementNote: loadedSpecialArrangementNote,
+      americanScholarshipAmount: loadedAmericanScholarshipAmount,
+      americanScholarshipNote: loadedAmericanScholarshipNote,
       bonusAmount: loadedBonusAmount,
       bonusNote: loadedBonusNote,
       notes: loadedNotes,
@@ -200,6 +209,8 @@ const RecordPanel = forwardRef(function RecordPanel(
       regularService !== baseline.regularService ||
       specialArrangementAmount !== baseline.specialArrangementAmount ||
       specialArrangementNote !== baseline.specialArrangementNote ||
+      americanScholarshipAmount !== baseline.americanScholarshipAmount ||
+      americanScholarshipNote !== baseline.americanScholarshipNote ||
       bonusAmount !== baseline.bonusAmount ||
       bonusNote !== baseline.bonusNote ||
       notes !== baseline.notes ||
@@ -228,6 +239,8 @@ const RecordPanel = forwardRef(function RecordPanel(
     regularService,
     specialArrangementAmount,
     specialArrangementNote,
+    americanScholarshipAmount,
+    americanScholarshipNote,
     bonusAmount,
     bonusNote,
     notes,
@@ -302,6 +315,9 @@ const RecordPanel = forwardRef(function RecordPanel(
         regular_service: regularService,
         special_arrangement_amount: specialArrangementAmount === "" ? null : Number(specialArrangementAmount),
         special_arrangement_note: specialArrangementNote === "" ? null : specialArrangementNote,
+        american_scholarship_amount:
+          americanScholarshipAmount === "" ? null : Number(americanScholarshipAmount),
+        american_scholarship_note: americanScholarshipNote === "" ? null : americanScholarshipNote,
         bonus_amount: bonusAmount === "" ? null : Number(bonusAmount),
         bonus_note: bonusNote === "" ? null : bonusNote,
         notes: notes === "" ? null : notes,
@@ -442,6 +458,26 @@ const RecordPanel = forwardRef(function RecordPanel(
               type="text"
               value={specialArrangementNote}
               onChange={(e) => setSpecialArrangementNote(e.target.value)}
+            />
+          </label>
+        </div>
+
+        <div className="field-row">
+          <label>
+            מלגה מהאמריקאים - סכום
+            <input
+              type="number"
+              min="0"
+              value={americanScholarshipAmount}
+              onChange={(e) => setAmericanScholarshipAmount(e.target.value)}
+            />
+          </label>
+          <label className="note-field">
+            הערה למלגה מהאמריקאים
+            <input
+              type="text"
+              value={americanScholarshipNote}
+              onChange={(e) => setAmericanScholarshipNote(e.target.value)}
             />
           </label>
         </div>

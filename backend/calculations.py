@@ -13,7 +13,8 @@ each override the attendance+extras calculation with a flat base (0
 and RESERVE_DUTY_AMOUNT respectively) - only one can apply, regular
 service takes priority if both are somehow checked.
 
-Special arrangement / bonus / manual adjustment / debt repayment: four
+Special arrangement / American scholarship / bonus / manual adjustment /
+debt repayment: five
 independent optional line items that add on top of whatever base applies
 (normal attendance+extras, or one of the flat overrides above). Only the
 manual adjustment is expected to ever be negative.
@@ -63,6 +64,7 @@ SECTION_LABELS = {
     "reserve_duty": "מילואים",
     "regular_service": "שירות צבאי סדיר",
     "special_arrangement": "הסדר מיוחד",
+    "american_scholarship": "מלגה מהאמריקאים",
     "bonus": "בונוס",
     "manual_adjustment": "התאמה ידנית",
     "debt_repayment": "החזר חוב",
@@ -106,6 +108,7 @@ def calculate_total_stipend(
     bonus_amount,
     manual_adjustment_amount,
     debt_repayment_amount=None,
+    american_scholarship_amount=None,
 ):
     if regular_service:
         base = 0.0
@@ -118,6 +121,7 @@ def calculate_total_stipend(
     return (
         base
         + (special_arrangement_amount or 0.0)
+        + (american_scholarship_amount or 0.0)
         + (bonus_amount or 0.0)
         + (manual_adjustment_amount or 0.0)
         + (debt_repayment_amount or 0.0)
@@ -155,6 +159,8 @@ def compute_actual_record(record_dict):
         actual["regular_service"] = False
     if "special_arrangement" in excluded:
         actual["special_arrangement_amount"] = None
+    if "american_scholarship" in excluded:
+        actual["american_scholarship_amount"] = None
     if "bonus" in excluded:
         actual["bonus_amount"] = None
     if "manual_adjustment" in excluded:
@@ -172,5 +178,6 @@ def compute_actual_record(record_dict):
         actual.get("bonus_amount"),
         actual.get("manual_adjustment_amount"),
         actual.get("debt_repayment_amount"),
+        actual.get("american_scholarship_amount"),
     )
     return actual
