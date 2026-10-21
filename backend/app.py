@@ -1,6 +1,8 @@
+import calendar
 import datetime
 import json
 import os
+import uuid
 
 from flask import Flask, Response, jsonify, request, send_file, send_from_directory
 from flask_cors import CORS
@@ -16,7 +18,18 @@ from calculations import (
 )
 from excel import build_avrech_report_xlsx, build_month_report_xlsx
 from holidays import month_calendar
-from models import Avrech, AvrechUpdate, DayExclusion, LedgerEntry, MonthHours, MonthlyRecord, db
+from models import (
+    Avrech,
+    AvrechUpdate,
+    DayExclusion,
+    DonationEntry,
+    Donor,
+    DonorReminder,
+    LedgerEntry,
+    MonthHours,
+    MonthlyRecord,
+    db,
+)
 from pdf import build_avrech_card_pdf, build_avrech_report_pdf, build_month_report_pdf, build_record_pdf
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -49,6 +62,7 @@ def _ensure_columns():
     avrech_cols = {c["name"] for c in inspector.get_columns("avreichim")}
     record_cols = {c["name"] for c in inspector.get_columns("monthly_records")}
     update_cols = {c["name"] for c in inspector.get_columns("avrech_updates")}
+    donor_cols = {c["name"] for c in inspector.get_columns("donors")}
 
     with db.engine.begin() as conn:
         if "children_count" not in avrech_cols:
@@ -88,6 +102,8 @@ def _ensure_columns():
             conn.execute(
                 text("ALTER TABLE avrech_updates ADD COLUMN monthly_reminder BOOLEAN NOT NULL DEFAULT 0")
             )
+        if "description" not in donor_cols:
+            conn.execute(text("ALTER TABLE donors ADD COLUMN description TEXT"))
 
 
 with app.app_context():
@@ -344,6 +360,283 @@ def update_ledger_entry(entry_id):
 def delete_ledger_entry(entry_id):
     entry = LedgerEntry.query.get_or_404(entry_id)
     db.session.delete(entry)
+    db.session.commit()
+    return "", 204
+
+
+# ---------- Donors ("תרומות") ----------
+
+def _parse_optional_date(value):
+    """'' / None -> None; otherwise an ISO date string (raises ValueError)."""
+    if not value:
+        return None
+    return datetime.date.fromisoformat(value)
+
+
+def _parse_optional_amount(value):
+    """'' / None -> None; otherwise a number (raises TypeError/ValueError)."""
+    if value is None or value == "":
+        return None
+    return float(value)
+
+
+def _donor_with_entries(donor, entries, reminders=()):
+    return {
+        **donor.to_dict(),
+        "entries": [e.to_dict() for e in entries],
+        "reminders": [r.to_dict() for r in reminders],
+    }
+
+
+def _sorted_donation_entries(query):
+    # Newest first; undated entries go last.
+    return query.order_by(
+        DonationEntry.date.is_(None), DonationEntry.date.desc(), DonationEntry.id.desc()
+    ).all()
+
+
+@app.get("/api/donors")
+def list_donors():
+    entries_by_donor = {}
+    for e in _sorted_donation_entries(DonationEntry.query):
+        entries_by_donor.setdefault(e.donor_id, []).append(e)
+    reminders_by_donor = {}
+    for r in _sorted_reminders(DonorReminder.query.filter(DonorReminder.donor_id.isnot(None))):
+        reminders_by_donor.setdefault(r.donor_id, []).append(r)
+    donors = Donor.query.order_by(Donor.name).all()
+    return jsonify(
+        [
+            _donor_with_entries(d, entries_by_donor.get(d.id, []), reminders_by_donor.get(d.id, []))
+            for d in donors
+        ]
+    )
+
+
+@app.post("/api/donors")
+def create_donor():
+    data = request.get_json(force=True)
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify({"error": "name is required"}), 400
+    donor = Donor(name=name)
+    db.session.add(donor)
+    db.session.commit()
+    return jsonify(_donor_with_entries(donor, [])), 201
+
+
+@app.put("/api/donors/<int:donor_id>")
+def update_donor(donor_id):
+    donor = Donor.query.get_or_404(donor_id)
+    data = request.get_json(force=True)
+    if "name" in data:
+        name = (data["name"] or "").strip()
+        if not name:
+            return jsonify({"error": "name is required"}), 400
+        donor.name = name
+    if "description" in data:
+        donor.description = (data["description"] or "").strip() or None
+    db.session.commit()
+    return jsonify(donor.to_dict())
+
+
+@app.delete("/api/donors/<int:donor_id>")
+def delete_donor(donor_id):
+    donor = Donor.query.get_or_404(donor_id)
+    DonationEntry.query.filter_by(donor_id=donor_id).delete()
+    DonorReminder.query.filter_by(donor_id=donor_id).delete()
+    db.session.delete(donor)
+    db.session.commit()
+    return "", 204
+
+
+@app.post("/api/donors/<int:donor_id>/entries")
+def create_donation_entry(donor_id):
+    Donor.query.get_or_404(donor_id)
+    data = request.get_json(force=True)
+    try:
+        entry = DonationEntry(
+            donor_id=donor_id,
+            date=_parse_optional_date(data.get("date")),
+            amount=_parse_optional_amount(data.get("amount")),
+            note=(data.get("note") or "").strip() or None,
+        )
+    except (TypeError, ValueError):
+        return jsonify({"error": "invalid date or amount"}), 400
+    db.session.add(entry)
+    db.session.commit()
+    return jsonify(entry.to_dict()), 201
+
+
+@app.put("/api/donation-entries/<int:entry_id>")
+def update_donation_entry(entry_id):
+    entry = DonationEntry.query.get_or_404(entry_id)
+    data = request.get_json(force=True)
+    try:
+        if "date" in data:
+            entry.date = _parse_optional_date(data["date"])
+        if "amount" in data:
+            entry.amount = _parse_optional_amount(data["amount"])
+    except (TypeError, ValueError):
+        return jsonify({"error": "invalid date or amount"}), 400
+    if "note" in data:
+        entry.note = (data["note"] or "").strip() or None
+    db.session.commit()
+    return jsonify(entry.to_dict())
+
+
+@app.delete("/api/donation-entries/<int:entry_id>")
+def delete_donation_entry(entry_id):
+    entry = DonationEntry.query.get_or_404(entry_id)
+    db.session.delete(entry)
+    db.session.commit()
+    return "", 204
+
+
+# ---------- Donor reminders (donations calendar) ----------
+
+def _sorted_reminders(query):
+    # Untimed reminders sort before timed ones on the same day.
+    return query.order_by(
+        DonorReminder.date, DonorReminder.time.isnot(None), DonorReminder.time, DonorReminder.id
+    ).all()
+
+
+def _reminders_with_donor_names(reminders):
+    names = {d.id: d.name for d in Donor.query.all()}
+    return [{**r.to_dict(), "donor_name": names.get(r.donor_id)} for r in reminders]
+
+
+def _add_months(date_value, months, day):
+    """date_value shifted by `months`, on `day` clamped to that month's length."""
+    month_index = date_value.month - 1 + months
+    year = date_value.year + month_index // 12
+    month = month_index % 12 + 1
+    return datetime.date(year, month, min(day, calendar.monthrange(year, month)[1]))
+
+
+def _parse_time(value):
+    value = (value or "").strip()
+    if not value:
+        return None
+    datetime.time.fromisoformat(value)  # validates, raises ValueError
+    return value[:5]
+
+
+@app.get("/api/donor-reminders")
+def list_donor_reminders():
+    try:
+        start = datetime.date.fromisoformat(request.args["from"])
+        end = datetime.date.fromisoformat(request.args["to"])
+    except (KeyError, ValueError):
+        return jsonify({"error": "from and to dates are required"}), 400
+    reminders = _sorted_reminders(DonorReminder.query.filter(DonorReminder.date.between(start, end)))
+    return jsonify(_reminders_with_donor_names(reminders))
+
+
+@app.get("/api/donor-reminders/overdue")
+def list_overdue_donor_reminders():
+    today = datetime.date.today()
+    reminders = _sorted_reminders(
+        DonorReminder.query.filter(DonorReminder.date < today, DonorReminder.done.is_(False))
+    )
+    return jsonify(_reminders_with_donor_names(reminders))
+
+
+@app.post("/api/donor-reminders")
+def create_donor_reminder():
+    """Creates one reminder, or a monthly series when `recur` is set - one
+    occurrence a month from `date` through `recur_until` (default: a year)."""
+    data = request.get_json(force=True)
+    title = (data.get("title") or "").strip()
+    if not title:
+        return jsonify({"error": "title is required"}), 400
+
+    donor_id = data.get("donor_id") or None
+    if donor_id is not None:
+        Donor.query.get_or_404(donor_id)
+
+    try:
+        start = datetime.date.fromisoformat(data.get("date") or "")
+        time_value = _parse_time(data.get("time"))
+        until = (
+            datetime.date.fromisoformat(data["recur_until"])
+            if data.get("recur_until")
+            else _add_months(start, 12, start.day)
+        )
+    except ValueError:
+        return jsonify({"error": "invalid date or time"}), 400
+
+    dates = [start]
+    series = None
+    if data.get("recur"):
+        series = uuid.uuid4().hex
+        dates = []
+        n = 0
+        while (d := _add_months(start, n, start.day)) <= until:
+            dates.append(d)
+            n += 1
+        if not dates:
+            dates = [start]
+
+    note = (data.get("note") or "").strip() or None
+    reminders = [
+        DonorReminder(
+            donor_id=donor_id, date=d, time=time_value, title=title, note=note, recur_series=series
+        )
+        for d in dates
+    ]
+    db.session.add_all(reminders)
+    db.session.commit()
+    return jsonify({"count": len(reminders), "reminders": [r.to_dict() for r in reminders]}), 201
+
+
+@app.put("/api/donor-reminders/<int:reminder_id>")
+def update_donor_reminder(reminder_id):
+    """Edits one occurrence. With whole_series, title / note / time / donor
+    are applied to every occurrence in the series too (each keeps its date)."""
+    reminder = DonorReminder.query.get_or_404(reminder_id)
+    data = request.get_json(force=True)
+
+    if "title" in data:
+        title = (data["title"] or "").strip()
+        if not title:
+            return jsonify({"error": "title is required"}), 400
+        data["title"] = title
+    if "note" in data:
+        data["note"] = (data["note"] or "").strip() or None
+    if "donor_id" in data:
+        data["donor_id"] = data["donor_id"] or None
+        if data["donor_id"] is not None:
+            Donor.query.get_or_404(data["donor_id"])
+    try:
+        if "time" in data:
+            data["time"] = _parse_time(data["time"])
+        if "date" in data:
+            reminder.date = datetime.date.fromisoformat(data["date"])
+    except ValueError:
+        return jsonify({"error": "invalid date or time"}), 400
+    if "done" in data:
+        reminder.done = bool(data["done"])
+
+    shared_fields = [f for f in ("title", "note", "time", "donor_id") if f in data]
+    targets = [reminder]
+    if data.get("whole_series") and reminder.recur_series:
+        targets = DonorReminder.query.filter_by(recur_series=reminder.recur_series).all()
+    for target in targets:
+        for field in shared_fields:
+            setattr(target, field, data[field])
+
+    db.session.commit()
+    return jsonify(reminder.to_dict())
+
+
+@app.delete("/api/donor-reminders/<int:reminder_id>")
+def delete_donor_reminder(reminder_id):
+    reminder = DonorReminder.query.get_or_404(reminder_id)
+    if request.args.get("whole_series") and reminder.recur_series:
+        DonorReminder.query.filter_by(recur_series=reminder.recur_series).delete()
+    else:
+        db.session.delete(reminder)
     db.session.commit()
     return "", 204
 
@@ -782,6 +1075,9 @@ def backup():
     exclusions = DayExclusion.query.all()
     updates = AvrechUpdate.query.all()
     ledger_entries = LedgerEntry.query.all()
+    donors = Donor.query.all()
+    donation_entries = DonationEntry.query.all()
+    donor_reminders = DonorReminder.query.all()
 
     data = {
         "version": 1,
@@ -802,6 +1098,9 @@ def backup():
         "day_exclusions": [e.to_dict() for e in exclusions],
         "avrech_updates": [u.to_dict() for u in updates],
         "ledger_entries": [e.to_dict() for e in ledger_entries],
+        "donors": [d.to_dict() for d in donors],
+        "donation_entries": [e.to_dict() for e in donation_entries],
+        "donor_reminders": [r.to_dict() for r in donor_reminders],
     }
 
     payload = json.dumps(data, ensure_ascii=False, indent=2)
@@ -826,6 +1125,13 @@ def restore():
         DayExclusion.query.delete()
         MonthHours.query.delete()
         Avrech.query.delete()
+        # Older backups predate the donations area - leave donors alone
+        # rather than wiping them when restoring one of those.
+        has_donors = "donors" in data
+        if has_donors:
+            DonationEntry.query.delete()
+            DonorReminder.query.delete()
+            Donor.query.delete()
 
         for a in data["avreichim"]:
             db.session.add(
@@ -911,6 +1217,33 @@ def restore():
                 )
             )
 
+        if has_donors:
+            for d in data["donors"]:
+                db.session.add(Donor(id=d["id"], name=d["name"], description=d.get("description")))
+            for e in data.get("donation_entries", []):
+                db.session.add(
+                    DonationEntry(
+                        id=e["id"],
+                        donor_id=e["donor_id"],
+                        date=_parse_optional_date(e.get("date")),
+                        amount=e.get("amount"),
+                        note=e.get("note"),
+                    )
+                )
+            for r in data.get("donor_reminders", []):
+                db.session.add(
+                    DonorReminder(
+                        id=r["id"],
+                        donor_id=r.get("donor_id"),
+                        date=datetime.date.fromisoformat(r["date"]),
+                        time=r.get("time"),
+                        title=r["title"],
+                        note=r.get("note"),
+                        done=bool(r.get("done")),
+                        recur_series=r.get("recur_series"),
+                    )
+                )
+
         db.session.commit()
     except (KeyError, ValueError, TypeError) as exc:
         db.session.rollback()
@@ -923,6 +1256,7 @@ def restore():
             "monthly_records": len(data["monthly_records"]),
             "avrech_updates": len(data.get("avrech_updates", [])),
             "ledger_entries": len(data.get("ledger_entries", [])),
+            "donors": len(data.get("donors", [])),
         }
     )
 

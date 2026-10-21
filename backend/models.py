@@ -196,3 +196,72 @@ class DayExclusion(db.Model):
 
     def to_dict(self):
         return {"date": self.date.isoformat(), "excluded_hours": self.excluded_hours}
+
+
+class Donor(db.Model):
+    """A donor's card in the donations area ('תרומות') - separate from the
+    avreichim/stipends side of the app."""
+
+    __tablename__ = "donors"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    # Free-text general description of the donor, shown at the top of their card.
+    description = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
+
+    def to_dict(self):
+        return {"id": self.id, "name": self.name, "description": self.description}
+
+
+class DonationEntry(db.Model):
+    """One line on a donor's card. Every field is optional."""
+
+    __tablename__ = "donation_entries"
+
+    id = db.Column(db.Integer, primary_key=True)
+    donor_id = db.Column(db.Integer, db.ForeignKey("donors.id"), nullable=False)
+    date = db.Column(db.Date, nullable=True)
+    amount = db.Column(db.Float, nullable=True)
+    note = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "donor_id": self.donor_id,
+            "date": self.date.isoformat() if self.date else None,
+            "amount": self.amount,
+            "note": self.note,
+        }
+
+
+class DonorReminder(db.Model):
+    """A reminder on the donations calendar - either standalone (donor_id is
+    None) or attached to a donor, in which case it also shows on their card.
+    Monthly recurring reminders are stored as one row per occurrence, linked
+    by a shared recur_series id."""
+
+    __tablename__ = "donor_reminders"
+
+    id = db.Column(db.Integer, primary_key=True)
+    donor_id = db.Column(db.Integer, db.ForeignKey("donors.id"), nullable=True)
+    date = db.Column(db.Date, nullable=False)
+    time = db.Column(db.String(5), nullable=True)  # "HH:MM"
+    title = db.Column(db.Text, nullable=False)
+    note = db.Column(db.Text, nullable=True)
+    done = db.Column(db.Boolean, nullable=False, default=False)
+    recur_series = db.Column(db.String(32), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, server_default=db.func.now())
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "donor_id": self.donor_id,
+            "date": self.date.isoformat(),
+            "time": self.time,
+            "title": self.title,
+            "note": self.note,
+            "done": self.done,
+            "recur_series": self.recur_series,
+        }

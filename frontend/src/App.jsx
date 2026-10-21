@@ -8,6 +8,8 @@ import SummaryPage from "./components/SummaryPage";
 import BackupPage from "./components/BackupPage";
 import ArchivePage from "./components/ArchivePage";
 import CardsPage from "./components/CardsPage";
+import DonationsPage from "./components/DonationsPage";
+import RemindersCalendarPage from "./components/RemindersCalendarPage";
 import {
   listAvreichim,
   createAvrech,
@@ -23,7 +25,9 @@ import "./App.css";
 const CURRENT_YEAR = new Date().getFullYear();
 
 export default function App() {
+  const [section, setSection] = useState("milgot"); // "milgot" | "donations"
   const [activeTab, setActiveTab] = useState("students");
+  const [donationsTab, setDonationsTab] = useState("donors"); // "donors" | "calendar"
   const [avreichim, setAvreichim] = useState([]);
   const [selectedAvrechId, setSelectedAvrechId] = useState(null);
   const [year, setYear] = useState(CURRENT_YEAR);
@@ -126,6 +130,11 @@ export default function App() {
     setActiveTab(tab);
   }
 
+  async function handleSectionChange(newSection) {
+    await recordPanelRef.current?.flush();
+    setSection(newSection);
+  }
+
   async function handleCalculateAttendance(studyHours, excludedHours) {
     const updated = await calculateAttendance(
       selectedAvrechId,
@@ -145,49 +154,97 @@ export default function App() {
   const selectedAvrech = avreichim.find((a) => a.id === selectedAvrechId) || null;
   const reminders = (avrechCard?.updates || []).filter((u) => u.monthly_reminder);
 
+  const sectionNav = (
+    <nav className="section-nav">
+      <button
+        className={section === "milgot" ? "active" : ""}
+        onClick={() => handleSectionChange("milgot")}
+      >
+        מלגות
+      </button>
+      <button
+        className={section === "donations" ? "active" : ""}
+        onClick={() => handleSectionChange("donations")}
+      >
+        תרומות
+      </button>
+    </nav>
+  );
+
+  if (section === "donations") {
+    return (
+      <div className="app-shell">
+        <div className="app-top">
+          {sectionNav}
+          <header className="app-header">
+            <h1>תרומות</h1>
+            <nav className="tab-nav">
+              <button
+                className={donationsTab === "donors" ? "active" : ""}
+                onClick={() => setDonationsTab("donors")}
+              >
+                כרטיסי תורמים
+              </button>
+              <button
+                className={donationsTab === "calendar" ? "active" : ""}
+                onClick={() => setDonationsTab("calendar")}
+              >
+                לוח תזכורות
+              </button>
+            </nav>
+          </header>
+        </div>
+        {donationsTab === "donors" ? <DonationsPage /> : <RemindersCalendarPage />}
+      </div>
+    );
+  }
+
   return (
     <div className="app-shell">
-      <header className="app-header">
-        <h1>מעקב מלגות אברכים</h1>
-        <nav className="tab-nav">
-          <button
-            className={activeTab === "students" ? "active" : ""}
-            onClick={() => handleTabChange("students")}
-          >
-            אברכים
-          </button>
-          <button
-            className={activeTab === "cards" ? "active" : ""}
-            onClick={() => handleTabChange("cards")}
-          >
-            כרטיסים
-          </button>
-          <button
-            className={activeTab === "calendar" ? "active" : ""}
-            onClick={() => handleTabChange("calendar")}
-          >
-            לוח שנה
-          </button>
-          <button
-            className={activeTab === "summary" ? "active" : ""}
-            onClick={() => handleTabChange("summary")}
-          >
-            סיכום כללי
-          </button>
-          <button
-            className={activeTab === "backup" ? "active" : ""}
-            onClick={() => handleTabChange("backup")}
-          >
-            גיבוי ושחזור
-          </button>
-          <button
-            className={activeTab === "archive" ? "active" : ""}
-            onClick={() => handleTabChange("archive")}
-          >
-            ארכיון
-          </button>
-        </nav>
-      </header>
+      <div className="app-top">
+        {sectionNav}
+        <header className="app-header">
+          <h1>מעקב מלגות אברכים</h1>
+          <nav className="tab-nav">
+            <button
+              className={activeTab === "students" ? "active" : ""}
+              onClick={() => handleTabChange("students")}
+            >
+              אברכים
+            </button>
+            <button
+              className={activeTab === "cards" ? "active" : ""}
+              onClick={() => handleTabChange("cards")}
+            >
+              כרטיסים
+            </button>
+            <button
+              className={activeTab === "calendar" ? "active" : ""}
+              onClick={() => handleTabChange("calendar")}
+            >
+              לוח שנה
+            </button>
+            <button
+              className={activeTab === "summary" ? "active" : ""}
+              onClick={() => handleTabChange("summary")}
+            >
+              סיכום כללי
+            </button>
+            <button
+              className={activeTab === "backup" ? "active" : ""}
+              onClick={() => handleTabChange("backup")}
+            >
+              גיבוי ושחזור
+            </button>
+            <button
+              className={activeTab === "archive" ? "active" : ""}
+              onClick={() => handleTabChange("archive")}
+            >
+              ארכיון
+            </button>
+          </nav>
+        </header>
+      </div>
 
       {activeTab === "students" ? (
         <div className="app-layout">

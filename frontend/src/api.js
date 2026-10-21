@@ -199,3 +199,87 @@ export function editLedgerEntry(entryId, entry) {
 export function deleteLedgerEntry(entryId) {
   return fetch(`${BASE_URL}/ledger/${entryId}`, { method: "DELETE" }).then(handle);
 }
+
+export function listDonors() {
+  return fetch(`${BASE_URL}/donors`).then(handle);
+}
+
+export function createDonor(name) {
+  return fetch(`${BASE_URL}/donors`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  }).then(handle);
+}
+
+export function renameDonor(donorId, name) {
+  return fetch(`${BASE_URL}/donors/${donorId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  }).then(handle);
+}
+
+export function editDonorDescription(donorId, description) {
+  return fetch(`${BASE_URL}/donors/${donorId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ description }),
+  }).then(handle);
+}
+
+export function deleteDonor(donorId) {
+  return fetch(`${BASE_URL}/donors/${donorId}`, { method: "DELETE" }).then(handle);
+}
+
+export function createDonationEntry(donorId, entry) {
+  return fetch(`${BASE_URL}/donors/${donorId}/entries`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(entry),
+  }).then(handle);
+}
+
+export function editDonationEntry(entryId, entry) {
+  return fetch(`${BASE_URL}/donation-entries/${entryId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(entry),
+  }).then(handle);
+}
+
+export function deleteDonationEntry(entryId) {
+  return fetch(`${BASE_URL}/donation-entries/${entryId}`, { method: "DELETE" }).then(handle);
+}
+
+export function listDonorReminders(from, to) {
+  const params = new URLSearchParams({ from, to });
+  return fetch(`${BASE_URL}/donor-reminders?${params}`).then(handle);
+}
+
+export function listOverdueDonorReminders() {
+  return fetch(`${BASE_URL}/donor-reminders/overdue`).then(handle);
+}
+
+export function createDonorReminder(reminder) {
+  return fetch(`${BASE_URL}/donor-reminders`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(reminder),
+  }).then(handle);
+}
+
+export function editDonorReminder(reminderId, changes) {
+  return fetch(`${BASE_URL}/donor-reminders/${reminderId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(changes),
+  }).then(handle);
+}
+
+export function deleteDonorReminder(reminderId, wholeSeries = false) {
+  const query = wholeSeries ? "?whole_series=1" : "";
+  return fetch(`${BASE_URL}/donor-reminders/${reminderId}${query}`, { method: "DELETE" }).then(
+    handle
+  );
+}

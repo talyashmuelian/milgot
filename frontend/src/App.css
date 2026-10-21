@@ -15,9 +15,43 @@
   background: var(--bg);
   border-bottom: 1px solid var(--border);
   box-shadow: var(--shadow);
+}
+
+/* The section bar (מלגות / תרומות) and the header stick together. */
+.app-top {
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+.section-nav {
+  display: flex;
+  gap: 2px;
+  padding: 0 28px;
+  background: var(--text-h);
+}
+
+.section-nav button {
+  border: none;
+  background: none;
+  padding: 9px 22px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--bg);
+  opacity: 0.6;
+  border-bottom: 3px solid transparent;
+  transition: opacity 0.15s ease;
+}
+
+.section-nav button.active {
+  opacity: 1;
+  border-bottom-color: var(--accent);
+}
+
+.section-nav button:not(.active):hover {
+  opacity: 0.85;
 }
 
 .app-header h1 {
@@ -1507,4 +1541,600 @@ textarea:focus {
   color: var(--text-h);
   border-top: 1px solid var(--border);
   padding-top: 8px;
+}
+
+/* ---------- Donations ("תרומות") ---------- */
+
+.donations-toolbar {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.donations-toolbar .add-card-person-toggle,
+.donations-toolbar .add-card-person-form {
+  margin-bottom: 0;
+}
+
+.donations-search {
+  flex: 1;
+  min-width: 220px;
+  max-width: 420px;
+  margin-inline-start: auto;
+}
+
+.donor-summary {
+  margin-inline-start: auto;
+  font-size: 0.8rem;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.donor-rename-form {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.donor-rename-form input {
+  flex: 1;
+  min-width: 0;
+}
+
+.donation-list {
+  max-height: 360px;
+}
+
+.donation-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--bg-page);
+  font-size: 0.88rem;
+}
+
+.donation-row.is-editing {
+  padding: 6px;
+  background: var(--accent-bg);
+}
+
+.donation-row.is-editing form {
+  flex: 1;
+}
+
+.donation-row.search-hit {
+  outline: 2px solid var(--accent);
+}
+
+.donation-date {
+  flex: 0 0 82px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.donation-amount {
+  flex: 0 0 80px;
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+.donation-note {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-h);
+  word-break: break-word;
+}
+
+/* ---------- Shared buttons / modal (donations area) ---------- */
+
+.btn-primary,
+.btn-ghost,
+.btn-danger {
+  border-radius: 8px;
+  padding: 8px 16px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.btn-ghost {
+  background: var(--bg);
+  border-color: var(--border);
+  color: var(--text-h);
+}
+
+.btn-danger {
+  background: #c0392b;
+  color: #fff;
+}
+
+.btn-sm {
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 16px;
+}
+
+.modal {
+  background: var(--bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px 22px;
+  width: 100%;
+  max-width: 440px;
+  max-height: 90vh;
+  overflow-y: auto;
+  text-align: start;
+  cursor: default;
+}
+
+.modal-lg {
+  max-width: 620px;
+}
+
+.modal h3 {
+  margin: 0 0 14px;
+  font-size: 1.1rem;
+  color: var(--text-h);
+}
+
+.modal-text {
+  margin-bottom: 16px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.modal-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reminder-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reminder-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.reminder-form label.monthly-reminder-checkbox {
+  flex-direction: row;
+}
+
+.reminder-form input[type="text"],
+.reminder-form input[type="date"],
+.reminder-form input[type="time"],
+.reminder-form textarea,
+.reminder-form select {
+  font: inherit;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
+}
+
+.reminder-form-row {
+  display: flex;
+  gap: 10px;
+}
+
+.reminder-form-row label {
+  flex: 1;
+}
+
+.reminder-recur {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ---------- Reminders (list items) ---------- */
+
+.reminder-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.reminder-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--bg-page);
+  border-inline-start: 4px solid #7c3aed;
+}
+
+.reminder-item.is-donor {
+  border-inline-start-color: #1a8a4a;
+}
+
+.reminder-item.is-overdue {
+  background: rgba(192, 57, 43, 0.08);
+}
+
+.reminder-item.is-done .reminder-info {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+.reminder-item.search-hit {
+  outline: 2px solid var(--accent);
+}
+
+.reminder-done {
+  margin-top: 4px;
+  cursor: pointer;
+}
+
+.reminder-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.reminder-title {
+  color: var(--text-h);
+  font-weight: 600;
+  font-size: 0.9rem;
+  word-break: break-word;
+}
+
+.reminder-when {
+  font-weight: 400;
+  color: var(--text);
+  margin-inline-end: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.reminder-note {
+  font-size: 0.82rem;
+  margin-top: 2px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.reminder-source {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(124, 58, 237, 0.12);
+  color: #7c3aed;
+}
+
+.reminder-item.is-donor .reminder-source {
+  background: rgba(26, 138, 74, 0.12);
+  color: #1a8a4a;
+}
+
+.reminder-overdue-badge {
+  margin-inline-start: 8px;
+  font-size: 0.7rem;
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.donor-reminders-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.donor-reminders-header h4 {
+  flex: 1;
+}
+
+/* ---------- Reminders calendar ---------- */
+
+.cal-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.cal-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cal-nav button {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.cal-nav-label {
+  min-width: 150px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text-h);
+}
+
+.cal-today-btn {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-h);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.cal-view-toggle {
+  display: flex;
+  background: var(--accent-bg);
+  border-radius: 999px;
+  padding: 3px;
+}
+
+.cal-view-toggle button {
+  border: none;
+  background: none;
+  border-radius: 999px;
+  padding: 5px 14px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--text);
+}
+
+.cal-view-toggle button.active {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.cal-legend {
+  display: flex;
+  gap: 14px;
+  font-size: 0.8rem;
+  margin-bottom: 12px;
+}
+
+.cal-legend-item::before {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-inline-end: 6px;
+  vertical-align: middle;
+}
+
+.cal-legend-item.is-general::before {
+  background: #7c3aed;
+}
+
+.cal-legend-item.is-donor::before {
+  background: #1a8a4a;
+}
+
+.reminders-overdue {
+  background: var(--bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  border-inline-start: 4px solid #c0392b;
+}
+
+.reminders-overdue h4 {
+  margin: 0 0 10px;
+  color: #c0392b;
+  font-size: 0.95rem;
+}
+
+.rcal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.rcal-day-header {
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 6px 0;
+  background: var(--bg);
+  border-radius: 6px;
+}
+
+.rcal-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  min-height: 96px;
+  padding: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  text-align: start;
+  color: inherit;
+  min-width: 0;
+}
+
+.rcal-grid.is-week .rcal-cell {
+  min-height: 220px;
+}
+
+.rcal-cell:hover {
+  border-color: var(--accent-border);
+}
+
+.rcal-cell.is-blank {
+  background: transparent;
+  border-color: transparent;
+  cursor: default;
+}
+
+.rcal-cell.is-today {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg);
+}
+
+.rcal-day-num {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+.rcal-cell.is-today .rcal-day-num {
+  color: var(--accent);
+}
+
+.rcal-pill {
+  font-size: 0.72rem;
+  line-height: 1.3;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(124, 58, 237, 0.12);
+  color: #7c3aed;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rcal-grid.is-week .rcal-pill {
+  white-space: normal;
+}
+
+.rcal-pill.is-donor {
+  background: rgba(26, 138, 74, 0.12);
+  color: #1a8a4a;
+}
+
+.rcal-pill.is-done {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+.rcal-more {
+  font-size: 0.7rem;
+  color: var(--text);
+}
+
+@media (max-width: 720px) {
+  .rcal-grid {
+    gap: 2px;
+  }
+  .rcal-cell {
+    min-height: 64px;
+    padding: 3px;
+  }
+  .rcal-pill {
+    font-size: 0.62rem;
+    padding: 0 3px;
+  }
+}
+
+.donor-description {
+  background: var(--bg-page);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.donor-description-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.donor-description h4 {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.donor-description-text {
+  color: var(--text-h);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.donor-description .link-btn {
+  align-self: flex-start;
+}
+
+.donor-description textarea {
+  width: 100%;
+  font: inherit;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
+  resize: vertical;
 }
