@@ -25,9 +25,11 @@ from models import (
     DonationEntry,
     Donor,
     DonorReminder,
+    DonorTag,
     LedgerEntry,
     MonthHours,
     MonthlyRecord,
+    Tag,
     db,
 )
 from pdf import build_avrech_card_pdf, build_avrech_report_pdf, build_month_report_pdf, build_record_pdf
@@ -106,9 +108,24 @@ def _ensure_columns():
             conn.execute(text("ALTER TABLE donors ADD COLUMN description TEXT"))
 
 
+# The tags the donations area starts out with - seeded once, when the tags
+# table is first created; after that they're the user's to rename / delete.
+DEFAULT_TAGS = [
+    "שיעורי הרב אורי",
+    "בוגרי הכולל",
+    "ידידי הכולל",
+    "מתפללים",
+    "תושבי מבשרת",
+    "אמריקאים",
+]
+
 with app.app_context():
+    seed_tags = not inspect(db.engine).has_table("tags")
     db.create_all()
     _ensure_columns()
+    if seed_tags:
+        db.session.add_all(Tag(name=name) for name in DEFAULT_TAGS)
+        db.session.commit()
 
 
 # ---------- Frontend (built React app, if present) ----------
@@ -380,11 +397,12 @@ def _parse_optional_amount(value):
     return float(value)
 
 
-def _donor_with_entries(donor, entries, reminders=()):
+def _donor_with_entries(donor, entries, reminders=(), tag_ids=()):
     return {
         **donor.to_dict(),
         "entries": [e.to_dict() for e in entries],
         "reminders": [r.to_dict() for r in reminders],
+        "tag_ids": list(tag_ids),
     }
 
 
@@ -403,10 +421,18 @@ def list_donors():
     reminders_by_donor = {}
     for r in _sorted_reminders(DonorReminder.query.filter(DonorReminder.donor_id.isnot(None))):
         reminders_by_donor.setdefault(r.donor_id, []).append(r)
+    tags_by_donor = {}
+    for link in DonorTag.query.order_by(DonorTag.tag_id).all():
+        tags_by_donor.setdefault(link.donor_id, []).append(link.tag_id)
     donors = Donor.query.order_by(Donor.name).all()
     return jsonify(
         [
-            _donor_with_entries(d, entries_by_donor.get(d.id, []), reminders_by_donor.get(d.id, []))
+            _donor_with_entries(
+                d,
+                entries_by_donor.get(d.id, []),
+                reminders_by_donor.get(d.id, []),
+                tags_by_donor.get(d.id, []),
+            )
             for d in donors
         ]
     )
@@ -435,6 +461,13 @@ def update_donor(donor_id):
         donor.name = name
     if "description" in data:
         donor.description = (data["description"] or "").strip() or None
+    if "tag_ids" in data:
+        tag_ids = {int(t) for t in data["tag_ids"] or []}
+        known = {t.id for t in Tag.query.filter(Tag.id.in_(tag_ids)).all()} if tag_ids else set()
+        if known != tag_ids:
+            return jsonify({"error": "unknown tag"}), 400
+        DonorTag.query.filter_by(donor_id=donor_id).delete()
+        db.session.add_all(DonorTag(donor_id=donor_id, tag_id=t) for t in tag_ids)
     db.session.commit()
     return jsonify(donor.to_dict())
 
@@ -444,6 +477,7 @@ def delete_donor(donor_id):
     donor = Donor.query.get_or_404(donor_id)
     DonationEntry.query.filter_by(donor_id=donor_id).delete()
     DonorReminder.query.filter_by(donor_id=donor_id).delete()
+    DonorTag.query.filter_by(donor_id=donor_id).delete()
     db.session.delete(donor)
     db.session.commit()
     return "", 204
@@ -488,6 +522,54 @@ def update_donation_entry(entry_id):
 def delete_donation_entry(entry_id):
     entry = DonationEntry.query.get_or_404(entry_id)
     db.session.delete(entry)
+    db.session.commit()
+    return "", 204
+
+
+# ---------- Tags (on donors' cards) ----------
+
+def _tag_name_or_error(data, tag_id=None):
+    name = (data.get("name") or "").strip()
+    if not name:
+        return None, (jsonify({"error": "name is required"}), 400)
+    clash = Tag.query.filter(Tag.name == name, Tag.id != tag_id).first()
+    if clash:
+        return None, (jsonify({"error": "תגית בשם הזה כבר קיימת"}), 409)
+    return name, None
+
+
+@app.get("/api/tags")
+def list_tags():
+    return jsonify([t.to_dict() for t in Tag.query.order_by(Tag.id).all()])
+
+
+@app.post("/api/tags")
+def create_tag():
+    name, error = _tag_name_or_error(request.get_json(force=True))
+    if error:
+        return error
+    tag = Tag(name=name)
+    db.session.add(tag)
+    db.session.commit()
+    return jsonify(tag.to_dict()), 201
+
+
+@app.put("/api/tags/<int:tag_id>")
+def rename_tag(tag_id):
+    tag = Tag.query.get_or_404(tag_id)
+    name, error = _tag_name_or_error(request.get_json(force=True), tag_id)
+    if error:
+        return error
+    tag.name = name
+    db.session.commit()
+    return jsonify(tag.to_dict())
+
+
+@app.delete("/api/tags/<int:tag_id>")
+def delete_tag(tag_id):
+    tag = Tag.query.get_or_404(tag_id)
+    DonorTag.query.filter_by(tag_id=tag_id).delete()
+    db.session.delete(tag)
     db.session.commit()
     return "", 204
 
@@ -1101,6 +1183,8 @@ def backup():
         "donors": [d.to_dict() for d in donors],
         "donation_entries": [e.to_dict() for e in donation_entries],
         "donor_reminders": [r.to_dict() for r in donor_reminders],
+        "tags": [t.to_dict() for t in Tag.query.all()],
+        "donor_tags": [{"donor_id": l.donor_id, "tag_id": l.tag_id} for l in DonorTag.query.all()],
     }
 
     payload = json.dumps(data, ensure_ascii=False, indent=2)
@@ -1128,10 +1212,16 @@ def restore():
         # Older backups predate the donations area - leave donors alone
         # rather than wiping them when restoring one of those.
         has_donors = "donors" in data
+        # Likewise backups from before tags existed keep the current tag list
+        # (but drop the links, since the donors they pointed at are replaced).
+        has_tags = "tags" in data
         if has_donors:
             DonationEntry.query.delete()
             DonorReminder.query.delete()
+            DonorTag.query.delete()
             Donor.query.delete()
+            if has_tags:
+                Tag.query.delete()
 
         for a in data["avreichim"]:
             db.session.add(
@@ -1243,6 +1333,11 @@ def restore():
                         recur_series=r.get("recur_series"),
                     )
                 )
+            if has_tags:
+                for t in data["tags"]:
+                    db.session.add(Tag(id=t["id"], name=t["name"]))
+                for link in data.get("donor_tags", []):
+                    db.session.add(DonorTag(donor_id=link["donor_id"], tag_id=link["tag_id"]))
 
         db.session.commit()
     except (KeyError, ValueError, TypeError) as exc:

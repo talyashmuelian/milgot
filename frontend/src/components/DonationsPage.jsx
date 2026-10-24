@@ -8,16 +8,14 @@ import {
   createDonationEntry,
   editDonationEntry,
   deleteDonationEntry,
+  listTags,
 } from "../api";
 import { ReminderItem, ReminderModal } from "./reminders";
+import { DonorTagChips, DonorTagsEditor, TagFilterBar } from "./tags";
 import { formatDate, reminderMatches, todayIso } from "../dates";
 
-function sumEntries(entries) {
-  return entries.reduce((total, e) => total + (e.amount || 0), 0);
-}
-
 function entryMatches(entry, term) {
-  return [entry.note, entry.amount, entry.date, formatDate(entry.date)].some(
+  return [entry.note, entry.date, formatDate(entry.date)].some(
     (value) => value != null && String(value).toLowerCase().includes(term)
   );
 }
@@ -72,24 +70,20 @@ function AddDonorForm({ onAdded }) {
 function DonationRow({ entry, highlighted, onChanged }) {
   const [editing, setEditing] = useState(false);
   const [date, setDate] = useState("");
-  const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
 
   function startEdit() {
     setDate(entry.date || "");
-    setAmount(entry.amount ?? "");
     setNote(entry.note || "");
     setEditing(true);
   }
 
   async function handleSave(e) {
     e.preventDefault();
-    const num = String(amount).trim() === "" ? null : parseFloat(amount);
-    if (Number.isNaN(num)) return;
     setSaving(true);
     try {
-      await editDonationEntry(entry.id, { date, amount: num, note });
+      await editDonationEntry(entry.id, { date, note });
       await onChanged();
       setEditing(false);
     } finally {
@@ -98,7 +92,7 @@ function DonationRow({ entry, highlighted, onChanged }) {
   }
 
   async function handleDelete() {
-    if (!window.confirm("למחוק את הרשומה הזו?")) return;
+    if (!window.confirm("למחוק את העדכון הזה?")) return;
     await deleteDonationEntry(entry.id);
     await onChanged();
   }
@@ -109,15 +103,8 @@ function DonationRow({ entry, highlighted, onChanged }) {
         <form className="ledger-add-form" onSubmit={handleSave}>
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           <input
-            type="number"
-            step="0.01"
-            placeholder="סכום"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
-          <input
             type="text"
-            placeholder="הערה"
+            placeholder="תוכן העדכון"
             autoFocus
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -136,9 +123,6 @@ function DonationRow({ entry, highlighted, onChanged }) {
   return (
     <li className={`donation-row ${highlighted ? "search-hit" : ""}`}>
       <span className="donation-date">{entry.date ? formatDate(entry.date) : "—"}</span>
-      <span className="donation-amount">
-        {entry.amount != null ? `₪${entry.amount.toLocaleString("he-IL")}` : "—"}
-      </span>
       <span className="donation-note">{entry.note || ""}</span>
       <span className="row-actions">
         <button className="icon-btn" title="ערוך" onClick={startEdit}>
@@ -258,12 +242,11 @@ function DonorReminders({ donor, searchTerm, onChanged }) {
   );
 }
 
-function DonorCard({ donor, searchTerm, onChanged }) {
+function DonorCard({ donor, tags, searchTerm, onChanged }) {
   const [open, setOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [nameDraft, setNameDraft] = useState(donor.name);
   const [date, setDate] = useState(todayIso());
-  const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [adding, setAdding] = useState(false);
 
@@ -282,19 +265,16 @@ function DonorCard({ donor, searchTerm, onChanged }) {
   }
 
   async function handleDeleteDonor() {
-    if (!window.confirm(`למחוק את הכרטיס של ${donor.name} וכל הרשומות שבו?`)) return;
+    if (!window.confirm(`למחוק את הכרטיס של ${donor.name} וכל העדכונים שבו?`)) return;
     await deleteDonor(donor.id);
     await onChanged();
   }
 
   async function handleAdd(e) {
     e.preventDefault();
-    const num = amount.trim() === "" ? null : parseFloat(amount);
-    if (Number.isNaN(num)) return;
     setAdding(true);
     try {
-      await createDonationEntry(donor.id, { date, amount: num, note: note.trim() });
-      setAmount("");
+      await createDonationEntry(donor.id, { date, note: note.trim() });
       setNote("");
       setDate(todayIso());
       await onChanged();
@@ -302,8 +282,6 @@ function DonorCard({ donor, searchTerm, onChanged }) {
       setAdding(false);
     }
   }
-
-  const total = sumEntries(donor.entries);
 
   return (
     <div className={`avrech-card donor-card ${isOpen ? "open" : "collapsed"}`}>
@@ -342,7 +320,7 @@ function DonorCard({ donor, searchTerm, onChanged }) {
               <span className="card-toggle-arrow">{isOpen ? "▾" : "◂"}</span>
               <h3>{donor.name}</h3>
               <span className="donor-summary">
-                {donor.entries.length} רשומות · ₪{total.toLocaleString("he-IL")}
+                {donor.entries.length === 1 ? "עדכון אחד" : `${donor.entries.length} עדכונים`}
               </span>
             </button>
             <span className="row-actions">
@@ -357,32 +335,29 @@ function DonorCard({ donor, searchTerm, onChanged }) {
         )}
       </div>
 
+      {!isOpen && <DonorTagChips donor={donor} tags={tags} />}
+
       {isOpen && (
         <div className="avrech-card-body">
           <DonorDescription donor={donor} onChanged={onChanged} />
 
+          <DonorTagsEditor donor={donor} tags={tags} onChanged={onChanged} />
+
           <form className="ledger-add-form" onSubmit={handleAdd}>
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             <input
-              type="number"
-              step="0.01"
-              placeholder="סכום"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-            <input
               type="text"
-              placeholder="הערה"
+              placeholder="תוכן העדכון"
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />
             <button type="submit" disabled={adding}>
-              {adding ? "מוסיף..." : "הוסף רשומה"}
+              {adding ? "מוסיף..." : "הוסף עדכון"}
             </button>
           </form>
 
           <ul className="ledger-list donation-list">
-            {donor.entries.length === 0 && <li className="update-empty">אין רשומות עדיין.</li>}
+            {donor.entries.length === 0 && <li className="update-empty">אין עדכונים עדיין.</li>}
             {donor.entries.map((entry) => (
               <DonationRow
                 key={entry.id}
@@ -393,8 +368,6 @@ function DonorCard({ donor, searchTerm, onChanged }) {
             ))}
           </ul>
 
-          <div className="ledger-balance">סה"כ תרומות: ₪{total.toLocaleString("he-IL")}</div>
-
           <DonorReminders donor={donor} searchTerm={searchTerm} onChanged={onChanged} />
         </div>
       )}
@@ -404,10 +377,17 @@ function DonorCard({ donor, searchTerm, onChanged }) {
 
 export default function DonationsPage() {
   const [donors, setDonors] = useState(null);
+  const [tags, setTags] = useState([]);
   const [search, setSearch] = useState("");
+  const [selectedTags, setSelectedTags] = useState([]);
+  const [matchAllTags, setMatchAllTags] = useState(false);
 
-  function refresh() {
-    return listDonors().then(setDonors);
+  async function refresh() {
+    const [freshDonors, freshTags] = await Promise.all([listDonors(), listTags()]);
+    setDonors(freshDonors);
+    setTags(freshTags);
+    // A deleted tag also drops out of the active filter.
+    setSelectedTags((prev) => prev.filter((id) => freshTags.some((t) => t.id === id)));
   }
 
   useEffect(() => {
@@ -419,15 +399,21 @@ export default function DonationsPage() {
   }
 
   const term = search.trim().toLowerCase();
-  const visible = term
-    ? donors.filter(
-        (d) =>
-          d.name.toLowerCase().includes(term) ||
-          (d.description || "").toLowerCase().includes(term) ||
-          d.entries.some((e) => entryMatches(e, term)) ||
-          d.reminders.some((r) => reminderMatches(r, term))
-      )
-    : donors;
+  const visible = donors.filter((d) => {
+    if (selectedTags.length > 0) {
+      const has = (id) => d.tag_ids.includes(id);
+      if (matchAllTags ? !selectedTags.every(has) : !selectedTags.some(has)) return false;
+    }
+    if (!term) return true;
+    return (
+      d.name.toLowerCase().includes(term) ||
+      (d.description || "").toLowerCase().includes(term) ||
+      tags.some((t) => d.tag_ids.includes(t.id) && t.name.toLowerCase().includes(term)) ||
+      d.entries.some((e) => entryMatches(e, term)) ||
+      d.reminders.some((r) => reminderMatches(r, term))
+    );
+  });
+  const filtering = Boolean(term) || selectedTags.length > 0;
 
   return (
     <main className="cards-page">
@@ -436,20 +422,42 @@ export default function DonationsPage() {
         <input
           type="search"
           className="donations-search"
-          placeholder="חיפוש לפי שם, תיאור, הערה, סכום, תאריך או תזכורת..."
+          placeholder="חיפוש לפי שם, תיאור, תגית, עדכון, תאריך או תזכורת..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
 
+      <TagFilterBar
+        tags={tags}
+        donors={donors}
+        selected={selectedTags}
+        onSelectedChange={setSelectedTags}
+        matchAll={matchAllTags}
+        onMatchAllChange={setMatchAllTags}
+        onTagsChanged={refresh}
+      />
+
+      {filtering && donors.length > 0 && (
+        <p className="donations-result-count">
+          מוצגים {visible.length} מתוך {donors.length} תורמים
+        </p>
+      )}
+
       {donors.length === 0 ? (
         <p className="archive-empty">אין עדיין תורמים במערכת.</p>
       ) : visible.length === 0 ? (
-        <p className="archive-empty">לא נמצאו תוצאות עבור "{search.trim()}".</p>
+        <p className="archive-empty">אין תורמים שמתאימים לחיפוש / לסינון.</p>
       ) : (
         <div className="cards-grid">
           {visible.map((donor) => (
-            <DonorCard key={donor.id} donor={donor} searchTerm={term} onChanged={refresh} />
+            <DonorCard
+              key={donor.id}
+              donor={donor}
+              tags={tags}
+              searchTerm={term}
+              onChanged={refresh}
+            />
           ))}
         </div>
       )}

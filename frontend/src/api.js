@@ -283,3 +283,35 @@ export function deleteDonorReminder(reminderId, wholeSeries = false) {
     handle
   );
 }
+
+export function listTags() {
+  return fetch(`${BASE_URL}/tags`).then(handle);
+}
+
+export function createTag(name) {
+  return fetch(`${BASE_URL}/tags`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  }).then(handle);
+}
+
+export function renameTag(tagId, name) {
+  return fetch(`${BASE_URL}/tags/${tagId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  }).then(handle);
+}
+
+export function deleteTag(tagId) {
+  return fetch(`${BASE_URL}/tags/${tagId}`, { method: "DELETE" }).then(handle);
+}
+
+export function setDonorTags(donorId, tagIds) {
+  return fetch(`${BASE_URL}/donors/${donorId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ tag_ids: tagIds }),
+  }).then(handle);
+}

@@ -265,3 +265,25 @@ class DonorReminder(db.Model):
             "done": self.done,
             "recur_series": self.recur_series,
         }
+
+
+class Tag(db.Model):
+    """A label that can be put on donors' cards (e.g. 'אמריקאים') and used
+    to filter the donors list."""
+
+    __tablename__ = "tags"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False, unique=True)
+
+    def to_dict(self):
+        return {"id": self.id, "name": self.name}
+
+
+class DonorTag(db.Model):
+    """Which tags are set on which donor."""
+
+    __tablename__ = "donor_tags"
+
+    donor_id = db.Column(db.Integer, db.ForeignKey("donors.id"), primary_key=True)
+    tag_id = db.Column(db.Integer, db.ForeignKey("tags.id"), primary_key=True)
