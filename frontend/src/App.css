@@ -479,6 +479,13 @@
   margin: 0 0 12px;
 }
 
+.visibility-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
 .visibility-panel .checkbox-grid {
   margin-bottom: 0;
   max-width: none;

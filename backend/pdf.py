@@ -10,7 +10,6 @@ since they render correctly without reordering.
 import io
 import math
 import os
-import textwrap
 
 from bidi import get_display
 from reportlab.lib import colors
@@ -95,11 +94,42 @@ _SUBSECTION_HEADER_STYLE = ParagraphStyle(
 )
 
 
+def _text_width(text):
+    return pdfmetrics.stringWidth(text, FONT_NAME, _NOTE_TEXT_STYLE.fontSize)
+
+
+def _wrap_to_width(text, max_width):
+    """Split text into lines that fit max_width in the note font, measuring the
+    real width since it varies by font (local Arial vs. the server's wider
+    DejaVu). Line breaks the user typed are kept; a word too long for a whole
+    line is split."""
+    lines = []
+    for paragraph in str(text).splitlines() or [""]:
+        line = ""
+        for word in paragraph.split():
+            candidate = f"{line} {word}" if line else word
+            if _text_width(candidate) <= max_width:
+                line = candidate
+                continue
+            if line:
+                lines.append(line)
+            line = ""
+            for char in word:
+                if _text_width(line + char) > max_width:
+                    lines.append(line)
+                    line = ""
+                line += char
+        lines.append(line)
+    return lines
+
+
 def _note_flowables(label, text):
     """A bold label followed by the note text, each line pre-wrapped and
     bidi-reordered individually so multi-line notes stay in the right order
     (wrapping the already-reordered text as one block would flip line order)."""
-    lines = textwrap.wrap(str(text), width=60) or [""]
+    # The document frame insets its content by 6pt on each side; the extra 1pt
+    # keeps a full line from being re-wrapped by Paragraph over rounding.
+    lines = _wrap_to_width(text, RECORD_CONTENT_WIDTH - 13)
     html = "<br/>".join(he(line) for line in lines)
     return [
         Paragraph(f"<b>{he(label)}:</b>", _NOTE_LABEL_STYLE),

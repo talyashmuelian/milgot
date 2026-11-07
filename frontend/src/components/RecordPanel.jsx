@@ -93,9 +93,23 @@ const RecordPanel = forwardRef(function RecordPanel(
   const totalDirtyRef = useRef(false);
   const attendanceTimerRef = useRef(null);
   const totalTimerRef = useRef(null);
+  const loadedRecordKeyRef = useRef(null);
+  // Saves run one at a time, so an older save can't overwrite a newer one and
+  // flush() can wait for saves that are already on their way to the server.
+  const saveQueueRef = useRef(Promise.resolve());
 
   useEffect(() => {
-    if (!record) return;
+    if (!record) {
+      loadedRecordKeyRef.current = null;
+      return;
+    }
+    // A save response for the record already open must not touch the form: the
+    // user may have kept editing while it was on its way. Only load the form
+    // when a different record arrives.
+    const recordKey = `${record.avrech_id}/${record.year}/${record.month}`;
+    if (loadedRecordKeyRef.current === recordKey) return;
+    loadedRecordKeyRef.current = recordKey;
+
     attendanceDirtyRef.current = false;
     totalDirtyRef.current = false;
     clearTimeout(attendanceTimerRef.current);
@@ -267,6 +281,7 @@ const RecordPanel = forwardRef(function RecordPanel(
         tasks.push(handleCalculateTotal());
       }
       await Promise.all(tasks);
+      await saveQueueRef.current;
     },
   }));
 
@@ -294,12 +309,46 @@ const RecordPanel = forwardRef(function RecordPanel(
     );
   }
 
+  // Hides every section except the yes/no ones currently marked "כן", filled
+  // attendance and filled amounts - so the payslip still explains the total.
+  function hideAllExceptYesAndFilled() {
+    const hasAttendance = studyHours !== "" || excludedHours !== "";
+    const keep = {
+      ...checkboxes,
+      reserve_duty: reserveDuty,
+      regular_service: regularService,
+      attendance: hasAttendance,
+      attendance_amount: hasAttendance,
+      special_arrangement: Number(specialArrangementAmount),
+      american_scholarship: Number(americanScholarshipAmount),
+      bonus: Number(bonusAmount),
+      manual_adjustment: Number(manualAdjustmentAmount),
+      debt_repayment: Number(debtRepaymentAmount),
+    };
+    setHiddenSections(SECTION_LABELS.map(({ key }) => key).filter((key) => !keep[key]));
+  }
+
+  function excludeAllFromAverage() {
+    setAverageExcludedSections(SECTION_LABELS.map(({ key }) => key));
+  }
+
+  function enqueueSave(save) {
+    const result = saveQueueRef.current.then(save);
+    saveQueueRef.current = result.catch(() => {});
+    return result;
+  }
+
   async function handleCalculateAttendance() {
+    // What is being saved is the new baseline, so later edits - including going
+    // back to a previous value - are detected as changes and saved too.
+    attendanceBaselineRef.current = { studyHours, excludedHours };
     setSavingAttendance(true);
     try {
-      await onCalculateAttendance(
-        studyHours === "" ? null : Number(studyHours),
-        excludedHours === "" ? null : Number(excludedHours)
+      await enqueueSave(() =>
+        onCalculateAttendance(
+          studyHours === "" ? null : Number(studyHours),
+          excludedHours === "" ? null : Number(excludedHours)
+        )
       );
     } finally {
       setSavingAttendance(false);
@@ -307,28 +356,49 @@ const RecordPanel = forwardRef(function RecordPanel(
   }
 
   async function handleCalculateTotal() {
+    totalBaselineRef.current = {
+      checkboxes,
+      reserveDuty,
+      regularService,
+      specialArrangementAmount,
+      specialArrangementNote,
+      americanScholarshipAmount,
+      americanScholarshipNote,
+      bonusAmount,
+      bonusNote,
+      notes,
+      privateNote,
+      manualAdjustmentAmount,
+      manualAdjustmentNote,
+      debtRepaymentAmount,
+      debtRepaymentNote,
+      hiddenSections,
+      averageExcludedSections,
+    };
     setSavingTotal(true);
     try {
-      await onCalculateTotal({
-        ...checkboxes,
-        reserve_duty: reserveDuty,
-        regular_service: regularService,
-        special_arrangement_amount: specialArrangementAmount === "" ? null : Number(specialArrangementAmount),
-        special_arrangement_note: specialArrangementNote === "" ? null : specialArrangementNote,
-        american_scholarship_amount:
-          americanScholarshipAmount === "" ? null : Number(americanScholarshipAmount),
-        american_scholarship_note: americanScholarshipNote === "" ? null : americanScholarshipNote,
-        bonus_amount: bonusAmount === "" ? null : Number(bonusAmount),
-        bonus_note: bonusNote === "" ? null : bonusNote,
-        notes: notes === "" ? null : notes,
-        private_note: privateNote === "" ? null : privateNote,
-        manual_adjustment_amount: manualAdjustmentAmount === "" ? null : Number(manualAdjustmentAmount),
-        manual_adjustment_note: manualAdjustmentNote === "" ? null : manualAdjustmentNote,
-        debt_repayment_amount: debtRepaymentAmount === "" ? null : Number(debtRepaymentAmount),
-        debt_repayment_note: debtRepaymentNote === "" ? null : debtRepaymentNote,
-        hidden_sections: hiddenSections,
-        average_excluded_sections: averageExcludedSections,
-      });
+      await enqueueSave(() =>
+        onCalculateTotal({
+          ...checkboxes,
+          reserve_duty: reserveDuty,
+          regular_service: regularService,
+          special_arrangement_amount: specialArrangementAmount === "" ? null : Number(specialArrangementAmount),
+          special_arrangement_note: specialArrangementNote === "" ? null : specialArrangementNote,
+          american_scholarship_amount:
+            americanScholarshipAmount === "" ? null : Number(americanScholarshipAmount),
+          american_scholarship_note: americanScholarshipNote === "" ? null : americanScholarshipNote,
+          bonus_amount: bonusAmount === "" ? null : Number(bonusAmount),
+          bonus_note: bonusNote === "" ? null : bonusNote,
+          notes: notes === "" ? null : notes,
+          private_note: privateNote === "" ? null : privateNote,
+          manual_adjustment_amount: manualAdjustmentAmount === "" ? null : Number(manualAdjustmentAmount),
+          manual_adjustment_note: manualAdjustmentNote === "" ? null : manualAdjustmentNote,
+          debt_repayment_amount: debtRepaymentAmount === "" ? null : Number(debtRepaymentAmount),
+          debt_repayment_note: debtRepaymentNote === "" ? null : debtRepaymentNote,
+          hidden_sections: hiddenSections,
+          average_excluded_sections: averageExcludedSections,
+        })
+      );
     } finally {
       setSavingTotal(false);
     }
@@ -553,6 +623,14 @@ const RecordPanel = forwardRef(function RecordPanel(
 
         <div className="visibility-panel">
           <p className="visibility-panel-title">מה להציג בתלוש ה-PDF (ברירת מחדל: הכול מוצג)</p>
+          <div className="visibility-panel-actions">
+            <button type="button" className="pdf-link" onClick={hideAllExceptYesAndFilled}>
+              לא להציג הכול (חוץ מ"כן" ומה שמולא)
+            </button>
+            <button type="button" className="pdf-link" onClick={() => setHiddenSections([])}>
+              להציג הכול
+            </button>
+          </div>
           <div className="checkbox-grid">
             {SECTION_LABELS.map(({ key, label }) => (
               <label key={key} className="checkbox-field">
@@ -571,6 +649,18 @@ const RecordPanel = forwardRef(function RecordPanel(
           <p className="visibility-panel-title">
             אילו חלקים לכלול בחישוב ממוצע נוכחות (ברירת מחדל: הכול נכלל)
           </p>
+          <div className="visibility-panel-actions">
+            <button type="button" className="pdf-link" onClick={excludeAllFromAverage}>
+              לא להחשיב הכול לממוצע
+            </button>
+            <button
+              type="button"
+              className="pdf-link"
+              onClick={() => setAverageExcludedSections([])}
+            >
+              להחשיב הכול
+            </button>
+          </div>
           <div className="checkbox-grid">
             {SECTION_LABELS.map(({ key, label }) => (
               <label key={key} className="checkbox-field">
